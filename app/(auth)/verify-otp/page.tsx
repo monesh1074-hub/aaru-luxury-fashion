@@ -24,6 +24,12 @@ function VerifyOTPContent() {
     }
     setLoading(true)
     try {
+      // For password reset, redirect to reset-password page with the OTP
+      // The reset-password page will verify + consume the OTP when setting new password
+      if (purpose === "PASSWORD_RESET") {
+        router.push(`/reset-password?mobile=${mobile}&otp=${otp}`)
+        return
+      }
       const res = await verifyOtp(mobile, otp, purpose)
       if (res.success) {
         Toast.success("Mobile number verified successfully!")

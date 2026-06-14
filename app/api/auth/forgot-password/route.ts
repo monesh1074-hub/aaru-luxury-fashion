@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const verification = await prisma.otpVerification.findFirst({
       where: {
         userId: user.id,
-        purpose: "FORGOT_PASSWORD",
+        purpose: "PASSWORD_RESET",
         otpCode: otpCode.trim(),
         isUsed: false,
         expiresAt: { gt: new Date() }

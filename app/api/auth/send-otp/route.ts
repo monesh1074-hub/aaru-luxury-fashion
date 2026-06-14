@@ -14,15 +14,18 @@ function generateOTP(): string {
 
 async function sendSMSviaFast2SMS(mobile: string, otp: string): Promise<boolean> {
   try {
-    if (!process.env.FAST2SMS_API_KEY) {
-      console.warn('FAST2SMS_API_KEY not set in .env')
+    const apiKey = process.env.FAST2SMS_API_KEY
+    if (!apiKey) {
+      console.error('[Fast2SMS] FAST2SMS_API_KEY is NOT set in environment variables. OTP cannot be sent.')
       return false
     }
+
+    console.log(`[Fast2SMS] Sending OTP to ${mobile}`)
 
     const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
       method: 'POST',
       headers: {
-        'authorization': process.env.FAST2SMS_API_KEY,
+        'authorization': apiKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -32,11 +35,18 @@ async function sendSMSviaFast2SMS(mobile: string, otp: string): Promise<boolean>
         flash: 0
       })
     })
+
     const data = await response.json()
-    console.log('Fast2SMS response:', data)
-    return data.return === true
+    console.log(`[Fast2SMS] HTTP Status: ${response.status}, Response:`, JSON.stringify(data))
+
+    if (data.return !== true) {
+      console.error('[Fast2SMS] Failed to send SMS. Reason:', data.message || data.status || 'Unknown error')
+      return false
+    }
+
+    return true
   } catch (error) {
-    console.error('Fast2SMS error:', error)
+    console.error('[Fast2SMS] Exception while sending OTP:', error)
     return false
   }
 }

@@ -21,9 +21,9 @@ export default function ForgotPasswordPage() {
     }
     setLoading(true)
     try {
-      await axios.post("/api/auth/send-otp", { mobile, purpose: "FORGOT_PASSWORD" })
+      await axios.post("/api/auth/send-otp", { mobile, purpose: "PASSWORD_RESET" })
       Toast.success("OTP sent to your mobile number")
-      router.push(`/verify-otp?mobile=${mobile}&purpose=FORGOT_PASSWORD`)
+      router.push(`/verify-otp?mobile=${mobile}&purpose=PASSWORD_RESET`)
     } catch (err: any) {
       Toast.error(err.response?.data?.message || "Failed to send OTP")
     } finally {
