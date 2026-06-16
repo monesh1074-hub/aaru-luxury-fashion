@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { hashPassword } from "@/lib/auth"
 import { sendSMS } from "@/lib/fast2sms"
-import { sendEmail } from "@/lib/sendgrid"
+import { sendEmail } from "@/lib/email"
 
 export async function POST(req: NextRequest) {
   try {
