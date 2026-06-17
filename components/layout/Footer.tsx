@@ -31,14 +31,41 @@ export const Footer = () => {
             Celebrating the timeless essence of Indian heritage through premium handlooms, royal brocades, and modern couture aesthetics.
           </p>
           <div className="flex space-x-4">
-            <a href="#" className="hover:text-gold transition-colors duration-300" aria-label="Instagram">
+            <a
+              href="https://www.instagram.com/aaru_luxury_fashion"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gold transition-colors duration-300"
+              aria-label="AARU on Instagram"
+            >
               <Instagram size={18} />
             </a>
-            <a href="#" className="hover:text-gold transition-colors duration-300" aria-label="Facebook">
+            <a
+              href="https://www.facebook.com/aarulyxuryfashion"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gold transition-colors duration-300"
+              aria-label="AARU on Facebook"
+            >
               <Facebook size={18} />
             </a>
-            <a href="#" className="hover:text-gold transition-colors duration-300" aria-label="Twitter">
+            <a
+              href="https://twitter.com/aaru_luxury"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gold transition-colors duration-300"
+              aria-label="AARU on Twitter / X"
+            >
               <Twitter size={18} />
+            </a>
+            <a
+              href="https://wa.me/919999999999?text=Hi%20AARU%20Luxury%20Fashion%2C%20I%20would%20like%20to%20know%20more%20about%20your%20collections."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gold transition-colors duration-300"
+              aria-label="Chat with AARU on WhatsApp"
+            >
+              <Mail size={18} />
             </a>
           </div>
         </div>

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { useWishlistStore } from "@/store/wishlistStore"
 import { WishlistGrid } from "@/components/dashboard/WishlistGrid"
-import { User, ShoppingBag, Heart, MapPin, LogOut } from "lucide-react"
+import { User, ShoppingBag, Heart, MapPin, LogOut, Settings } from "lucide-react"
 import axios from "axios"
 
 export default function WishlistPage() {
@@ -37,6 +37,7 @@ export default function WishlistPage() {
     { label: "My Orders", href: "/dashboard/orders", icon: ShoppingBag },
     { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart, active: true },
     { label: "Addresses", href: "/dashboard/addresses", icon: MapPin },
+    { label: "Account Settings", href: "/dashboard/settings", icon: Settings },
   ]
 
   return (

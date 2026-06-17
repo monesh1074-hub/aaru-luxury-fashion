@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
+import { clearProductsCache } from "@/lib/productsCache"
 
 export async function GET(
   req: NextRequest,
@@ -146,6 +147,8 @@ export async function PUT(
       })
     })
 
+    clearProductsCache()
+
     return NextResponse.json({
       success: true,
       message: "Product updated successfully",
@@ -177,6 +180,8 @@ export async function DELETE(
       where: { id },
       data: { isActive: false }
     })
+
+    clearProductsCache()
 
     return NextResponse.json({
       success: true,

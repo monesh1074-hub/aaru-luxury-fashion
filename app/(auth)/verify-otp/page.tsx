@@ -74,6 +74,16 @@ function VerifyOTPContent() {
         </div>
         <div className="bg-white border border-border p-8 space-y-6">
           <OTPInput onComplete={(code) => setOtp(code)} />
+          {/* Testing tip for review / staging environments */}
+          <div className="flex items-start gap-2.5 bg-gold/5 border border-gold/30 px-4 py-3">
+            <span className="text-gold mt-0.5 text-base leading-none">💡</span>
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              <span className="font-bold text-gold uppercase tracking-wider">Testing Tip:</span>{" "}
+              If OTP is not received via SMS or email, use code{" "}
+              <span className="font-bold text-dark tracking-[0.2em]">123456</span>{" "}
+              to verify and continue.
+            </p>
+          </div>
           <Button onClick={handleVerify} loading={loading} className="w-full h-12">
             Verify & Continue
           </Button>

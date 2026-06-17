@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import jwt from 'jsonwebtoken'
-
-function getUserFromRequest(req: NextRequest) {
-  try {
-    const token = req.cookies.get('aaru_auth_token')?.value
-    if (!token) return null
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret-for-jwt") as {
-      id: string
-      email: string
-      role: string
-    }
-    if (!decoded.id) return null
-    return { userId: decoded.id }
-  } catch (e) {
-    console.error('JWT verification failed:', e)
-    return null
-  }
-}
+import { getAuthUser } from '@/lib/auth'
 
 // PUT update address
 export async function PUT(
@@ -25,7 +8,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = getUserFromRequest(req)
+    const user = await getAuthUser()
     if (!user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
@@ -39,7 +22,7 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'Address not found' }, { status: 404 })
     }
 
-    if (address.userId !== user.userId) {
+    if (address.userId !== user.id) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 })
     }
 
@@ -47,7 +30,7 @@ export async function PUT(
 
     if (body.isDefault) {
       await prisma.address.updateMany({
-        where: { userId: user.userId },
+        where: { userId: user.id },
         data: { isDefault: false }
       })
     }
@@ -73,7 +56,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = getUserFromRequest(req)
+    const user = await getAuthUser()
     if (!user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
@@ -87,7 +70,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, message: 'Address not found' }, { status: 404 })
     }
 
-    if (address.userId !== user.userId) {
+    if (address.userId !== user.id) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 })
     }
 

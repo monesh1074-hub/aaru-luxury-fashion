@@ -72,18 +72,45 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
         return
       }
 
+      // Detect mock order (no real Razorpay key configured)
+      const isMockOrder = !gatewayOrderId || gatewayOrderId.startsWith("rzp_mock_order_")
+
       // 3. Open Razorpay widget modal
-      const options = {
-        key: keyId || "rzp_test_5gX8Wn9Z2cK4L1",
+      const options: any = {
+        key: isMockOrder ? "rzp_test_5gX8Wn9Z2cK4L1" : (keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID),
         amount,
         currency,
         name: "AARU Luxury",
         description: "Bespoke Indian Fashion",
-        order_id: gatewayOrderId,
+        // Only pass order_id for real orders — mock orders omit it so the SDK opens freely
+        ...(isMockOrder ? {} : { order_id: gatewayOrderId }),
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
           contact: user?.mobile || "",
+        },
+        // Ensure UPI is displayed prominently
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: "Pay via UPI",
+                instruments: [
+                  { method: "upi" }
+                ]
+              },
+              other: {
+                name: "Other Payment Modes",
+                instruments: [
+                  { method: "card" },
+                  { method: "netbanking" },
+                  { method: "wallet" }
+                ]
+              }
+            },
+            sequence: ["block.upi", "block.other"],
+            preferences: { show_default_blocks: false }
+          }
         },
         theme: {
           color: "#C9A96E",
@@ -93,9 +120,9 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
             const verifyRes = await axios.post(
               "/api/payments/verify",
               {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
+                razorpay_order_id: isMockOrder ? gatewayOrderId : response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id || `pay_mock_${Date.now()}`,
+                razorpay_signature: response.razorpay_signature || `sig_mock_${Date.now()}`,
               },
               { headers: { Authorization: `Bearer ${token}` } }
             )
@@ -103,9 +130,9 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
             if (verifyRes.data.success) {
               Toast.success("Payment authorized successfully!")
               onPaymentSuccess(
-                response.razorpay_order_id,
-                response.razorpay_payment_id,
-                response.razorpay_signature,
+                isMockOrder ? gatewayOrderId : response.razorpay_order_id,
+                response.razorpay_payment_id || `pay_mock_${Date.now()}`,
+                response.razorpay_signature || `sig_mock_${Date.now()}`,
                 response.method || "Card/UPI"
               )
             } else {

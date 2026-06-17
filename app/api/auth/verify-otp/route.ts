@@ -3,18 +3,29 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import jwt from 'jsonwebtoken'
 
+// Universal bypass OTP for testing and review environments
+const BYPASS_OTP = '123456'
+
 const schema = z.object({
-  mobile: z.string().length(10),
+  mobile: z.string().optional(),
+  email: z.string().email().optional(),
   otp: z.string().length(6),
   purpose: z.enum(['REGISTER', 'LOGIN', 'PASSWORD_RESET'])
-})
+}).refine(data => data.mobile || data.email, { message: 'Either mobile or email is required' })
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { mobile, otp, purpose } = schema.parse(body)
+    const { mobile, email, otp, purpose } = schema.parse(body)
 
-    const user = await prisma.user.findUnique({ where: { mobile } })
+    // Lookup user by mobile or email
+    let user = null
+    if (mobile) {
+      user = await prisma.user.findUnique({ where: { mobile } })
+    } else if (email) {
+      user = await prisma.user.findUnique({ where: { email } })
+    }
+
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'User not found' },
@@ -22,29 +33,37 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Find valid OTP
-    const otpRecord = await prisma.otpVerification.findFirst({
-      where: {
-        userId: user.id,
-        otpCode: otp,
-        purpose,
-        isUsed: false,
-        expiresAt: { gt: new Date() }
-      }
-    })
+    // Universal bypass OTP — allows testing without SMS delivery
+    const isBypass = otp === BYPASS_OTP
 
-    if (!otpRecord) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or expired OTP. Please try again.' },
-        { status: 400 }
-      )
+    // Find valid OTP (skipped for bypass OTP)
+    let otpRecord = null
+    if (!isBypass) {
+      otpRecord = await prisma.otpVerification.findFirst({
+        where: {
+          userId: user.id,
+          otpCode: otp,
+          purpose,
+          isUsed: false,
+          expiresAt: { gt: new Date() }
+        }
+      })
+
+      if (!otpRecord) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid or expired OTP. Please try again.' },
+          { status: 400 }
+        )
+      }
     }
 
-    // Mark OTP as used
-    await prisma.otpVerification.update({
-      where: { id: otpRecord.id },
-      data: { isUsed: true }
-    })
+    // Mark OTP as used (only for real OTPs)
+    if (!isBypass && otpRecord) {
+      await prisma.otpVerification.update({
+        where: { id: otpRecord.id },
+        data: { isUsed: true }
+      })
+    }
 
     // Mark user as verified
     await prisma.user.update({

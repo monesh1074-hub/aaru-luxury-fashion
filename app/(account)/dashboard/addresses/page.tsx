@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, ShoppingBag, Heart, MapPin, LogOut } from 'lucide-react'
+import { User, ShoppingBag, Heart, MapPin, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 const addressSchema = z.object({
@@ -132,6 +132,7 @@ export default function AddressesPage() {
     { label: 'My Orders', href: '/dashboard/orders', icon: ShoppingBag },
     { label: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
     { label: 'Addresses', href: '/dashboard/addresses', icon: MapPin, active: true },
+    { label: 'Account Settings', href: '/dashboard/settings', icon: Settings },
   ]
 
   return (

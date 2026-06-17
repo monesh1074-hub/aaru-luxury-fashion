@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
+import { getCachedProducts, setCachedProducts, clearProductsCache } from "@/lib/productsCache"
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,15 +10,27 @@ export async function GET(req: NextRequest) {
     // Retrieve search filters from URL parameters
     const categorySlug = searchParams.get("category")
     const search = searchParams.get("search")
-    const minPrice = parseFloat(searchParams.get("minPrice") || "0")
-    const maxPrice = parseFloat(searchParams.get("maxPrice") || "999999")
-    const fabric = searchParams.get("fabric")
-    const occasion = searchParams.get("occasion")
+    // Support both priceMin/priceMax (from useProducts hook) and minPrice/maxPrice
+    const rawMin = searchParams.get("priceMin") || searchParams.get("minPrice")
+    const rawMax = searchParams.get("priceMax") || searchParams.get("maxPrice")
+    const minPrice = rawMin ? parseFloat(rawMin) : null
+    const maxPrice = rawMax ? parseFloat(rawMax) : null
+    // Support both sizes[] array and single fabric/occasion params
+    const sizesParam = searchParams.getAll("sizes")
+    const fabric = searchParams.get("fabrics") || searchParams.get("fabric")
+    const occasion = searchParams.get("occasions") || searchParams.get("occasion")
     const customizable = searchParams.get("isCustomizable")
     const sort = searchParams.get("sort") // price_asc, price_desc, newest, featured
     const limit = parseInt(searchParams.get("limit") || "12")
     const page = parseInt(searchParams.get("page") || "1")
     const skip = (page - 1) * limit
+
+    // Cache lookup using full URL as key
+    const cacheKey = req.url
+    const cachedData = getCachedProducts(cacheKey)
+    if (cachedData) {
+      return NextResponse.json(cachedData)
+    }
 
     // Build Prisma query condition object
     const where: any = { isActive: true }
@@ -33,15 +46,39 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    // Apply price filtering on basePrice (or salePrice if it exists)
-    where.AND = [
-      {
-        basePrice: {
-          gte: minPrice,
-          lte: maxPrice
-        }
+    // Apply price filtering on active price (salePrice if exists, otherwise basePrice)
+    if (minPrice !== null || maxPrice !== null) {
+      const salePriceCond: any = { not: null }
+      const basePriceCond: any = {}
+
+      if (minPrice !== null) {
+        salePriceCond.gte = minPrice
+        basePriceCond.gte = minPrice
       }
-    ]
+      if (maxPrice !== null) {
+        salePriceCond.lte = maxPrice
+        basePriceCond.lte = maxPrice
+      }
+
+      where.AND = [
+        {
+          OR: [
+            {
+              salePrice: salePriceCond
+            },
+            {
+              salePrice: null,
+              basePrice: basePriceCond
+            }
+          ]
+        }
+      ]
+    }
+
+    // Size filter (multi-value)
+    if (sizesParam.length > 0) {
+      where.variants = { some: { size: { in: sizesParam } } }
+    }
 
     if (fabric) {
       where.fabric = { contains: fabric, mode: "insensitive" }
@@ -83,15 +120,19 @@ export async function GET(req: NextRequest) {
       prisma.product.count({ where })
     ])
 
-    return NextResponse.json({
+    const responseData = {
       products,
+      total: totalCount, // top-level for useProducts hook compatibility
       pagination: {
         total: totalCount,
         page,
         limit,
         totalPages: Math.ceil(totalCount / limit)
       }
-    })
+    }
+    setCachedProducts(cacheKey, responseData)
+
+    return NextResponse.json(responseData)
   } catch (error: any) {
     console.error("Products GET error:", error)
     return NextResponse.json(
@@ -189,6 +230,8 @@ export async function POST(req: NextRequest) {
         }
       })
     })
+
+    clearProductsCache()
 
     return NextResponse.json({
       success: true,

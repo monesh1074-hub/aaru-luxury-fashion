@@ -8,7 +8,7 @@ import { Order } from "@/types"
 import { formatPrice, formatDate } from "@/lib/utils"
 import { Badge } from "@/components/ui/Badge"
 import { Breadcrumb } from "@/components/ui/Breadcrumb"
-import { User, ShoppingBag, Heart, MapPin, LogOut, Truck, PackageCheck } from "lucide-react"
+import { User, ShoppingBag, Heart, MapPin, LogOut, Truck, PackageCheck, Settings } from "lucide-react"
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
   const { logout } = useAuth()
@@ -36,6 +36,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     { label: "My Orders", href: "/dashboard/orders", icon: ShoppingBag, active: true },
     { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
     { label: "Addresses", href: "/dashboard/addresses", icon: MapPin },
+    { label: "Account Settings", href: "/dashboard/settings", icon: Settings },
   ]
 
   const getStepActive = (status: string, current: string) => {

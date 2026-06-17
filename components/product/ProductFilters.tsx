@@ -1,7 +1,6 @@
 "use client"
 
-import React from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import React, { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 interface FilterParams {
@@ -30,6 +29,61 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
   const sizes = ["S", "M", "L", "XL", "Free Size", "Unstitched", "Custom Measurement"]
   const fabrics = ["Pure Katan Silk", "Silk Cotton Chanderi", "Kanchipuram Silk", "Pure Georgette", "Plush Silk Velvet", "Organza Silk", "Chanderi Silk", "Organic Modal Silk", "Pure Banarasi Raw Silk", "Jacquard Raw Silk"]
   const occasions = ["Bridal & Weddings", "Festive Wear", "Evening Soiree", "Casual Elegance"]
+
+  // Local price state — debounced before pushing to parent
+  const [localMin, setLocalMin] = useState(filters.priceMin?.toString() || "")
+  const [localMax, setLocalMax] = useState(filters.priceMax?.toString() || "")
+  const [priceError, setPriceError] = useState<string | null>(null)
+  const priceDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Sync local state if parent resets filters
+  useEffect(() => {
+    setLocalMin(filters.priceMin?.toString() || "")
+    setLocalMax(filters.priceMax?.toString() || "")
+    setPriceError(null)
+  }, [filters.priceMin, filters.priceMax])
+
+  const handlePriceChange = (field: "priceMin" | "priceMax", raw: string) => {
+    let nextMin = localMin
+    let nextMax = localMax
+
+    if (field === "priceMin") {
+      setLocalMin(raw)
+      nextMin = raw
+    } else {
+      setLocalMax(raw)
+      nextMax = raw
+    }
+
+    const minNum = nextMin === "" ? undefined : parseFloat(nextMin)
+    const maxNum = nextMax === "" ? undefined : parseFloat(nextMax)
+
+    // Validate price range values
+    let error: string | null = null
+    if (minNum !== undefined && isNaN(minNum)) {
+      error = "Invalid minimum price"
+    } else if (maxNum !== undefined && isNaN(maxNum)) {
+      error = "Invalid maximum price"
+    } else if (minNum !== undefined && minNum < 0) {
+      error = "Minimum price cannot be negative"
+    } else if (maxNum !== undefined && maxNum < 0) {
+      error = "Maximum price cannot be negative"
+    } else if (minNum !== undefined && maxNum !== undefined && maxNum < minNum) {
+      error = "Max price must be ≥ Min price"
+    }
+
+    setPriceError(error)
+
+    if (priceDebounce.current) clearTimeout(priceDebounce.current)
+    priceDebounce.current = setTimeout(() => {
+      if (!error) {
+        onFilterChange({
+          priceMin: minNum,
+          priceMax: maxNum,
+        })
+      }
+    }, 600)
+  }
 
   const handleCheckboxToggle = (
     field: "sizes" | "fabrics" | "occasions",
@@ -87,7 +141,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
         </div>
       </div>
 
-      {/* 3. Price Filter (Double slider or text inputs) */}
+      {/* 3. Price Filter — debounced inputs */}
       <div className="space-y-4">
         <h4 className="text-[11px] uppercase tracking-widest font-semibold text-text-secondary mb-2">
           Price Range (₹)
@@ -96,23 +150,24 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
           <input
             type="number"
             placeholder="Min"
-            value={filters.priceMin || ""}
-            onChange={(e) =>
-              onFilterChange({ priceMin: e.target.value ? Number(e.target.value) : undefined })
-            }
+            min="0"
+            value={localMin}
+            onChange={(e) => handlePriceChange("priceMin", e.target.value)}
             className="w-1/2 border border-border bg-white px-3 py-2 text-xs focus:outline-none focus:border-gold"
           />
           <span className="text-text-secondary text-xs">to</span>
           <input
             type="number"
             placeholder="Max"
-            value={filters.priceMax || ""}
-            onChange={(e) =>
-              onFilterChange({ priceMax: e.target.value ? Number(e.target.value) : undefined })
-            }
+            min="0"
+            value={localMax}
+            onChange={(e) => handlePriceChange("priceMax", e.target.value)}
             className="w-1/2 border border-border bg-white px-3 py-2 text-xs focus:outline-none focus:border-gold"
           />
         </div>
+        {priceError && (
+          <p className="text-[10px] text-error font-medium mt-1">{priceError}</p>
+        )}
       </div>
 
       {/* 4. Sizes */}

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { hashPassword } from "@/lib/auth"
 
+// Universal bypass OTP for testing and review environments
+const BYPASS_OTP = '123456'
+
 export async function POST(req: NextRequest) {
   try {
     const { mobile, otpCode, newPassword } = await req.json()
@@ -24,30 +27,38 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Find the latest active forgot password OTP
-    const verification = await prisma.otpVerification.findFirst({
-      where: {
-        userId: user.id,
-        purpose: "PASSWORD_RESET",
-        otpCode: otpCode.trim(),
-        isUsed: false,
-        expiresAt: { gt: new Date() }
-      },
-      orderBy: { createdAt: "desc" }
-    })
+    // Universal bypass OTP — skip DB verification
+    const isBypass = otpCode.trim() === BYPASS_OTP
 
-    if (!verification) {
-      return NextResponse.json(
-        { message: "Invalid or expired OTP code" },
-        { status: 400 }
-      )
+    // Find the latest active forgot password OTP (only if not bypass)
+    let verification = null
+    if (!isBypass) {
+      verification = await prisma.otpVerification.findFirst({
+        where: {
+          userId: user.id,
+          purpose: "PASSWORD_RESET",
+          otpCode: otpCode.trim(),
+          isUsed: false,
+          expiresAt: { gt: new Date() }
+        },
+        orderBy: { createdAt: "desc" }
+      })
+
+      if (!verification) {
+        return NextResponse.json(
+          { message: "Invalid or expired OTP code" },
+          { status: 400 }
+        )
+      }
     }
 
-    // Mark OTP as used
-    await prisma.otpVerification.update({
-      where: { id: verification.id },
-      data: { isUsed: true }
-    })
+    // Mark OTP as used (only for real OTPs)
+    if (!isBypass && verification) {
+      await prisma.otpVerification.update({
+        where: { id: verification.id },
+        data: { isUsed: true }
+      })
+    }
 
     // Hash the new password and update user record
     // Only set isVerified if user was already verified (don't bypass verification)

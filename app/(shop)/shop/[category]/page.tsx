@@ -17,13 +17,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
           <span className="text-gold text-xs uppercase tracking-[0.3em] font-semibold block mb-1.5">Collection</span>
           <h1 className="font-display text-3xl font-semibold text-dark">{catName}</h1>
         </div>
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (<div key={i} className="animate-pulse bg-border/30 aspect-[3/4]" />))}
-          </div>
-        ) : (
-          <ProductGrid products={products} />
-        )}
+        <ProductGrid products={products} loading={loading} skeletonCount={6} />
       </div>
     </div>
   )

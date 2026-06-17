@@ -1,12 +1,27 @@
 import React from "react"
 import { ProductCard } from "./ProductCard"
+import { ProductSkeleton } from "./ProductSkeleton"
 import { Product } from "@/types"
 
 interface ProductGridProps {
   products: Product[]
+  loading?: boolean
+  skeletonCount?: number
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
+export const ProductGrid: React.FC<ProductGridProps> = ({
+  products,
+  loading = false,
+  skeletonCount = 8,
+}) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <ProductSkeleton count={skeletonCount} />
+      </div>
+    )
+  }
+
   if (products.length === 0) {
     return (
       <div className="text-center py-20 font-body">

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { useOrders } from "@/hooks/useOrders"
 import { OrderCard } from "@/components/dashboard/OrderCard"
-import { User, ShoppingBag, Heart, MapPin, LogOut } from "lucide-react"
+import { User, ShoppingBag, Heart, MapPin, LogOut, Settings } from "lucide-react"
 
 export default function MyOrdersPage() {
   const { logout } = useAuth()
@@ -20,6 +20,7 @@ export default function MyOrdersPage() {
     { label: "My Orders", href: "/dashboard/orders", icon: ShoppingBag, active: true },
     { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
     { label: "Addresses", href: "/dashboard/addresses", icon: MapPin },
+    { label: "Account Settings", href: "/dashboard/settings", icon: Settings },
   ]
 
   return (

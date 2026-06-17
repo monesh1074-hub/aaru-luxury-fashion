@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import jwt from 'jsonwebtoken'
+import { getAuthUser } from '@/lib/auth'
 
 const addressSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
@@ -15,31 +15,10 @@ const addressSchema = z.object({
   isDefault: z.boolean().default(false)
 })
 
-function getUserFromRequest(req: NextRequest) {
-  try {
-    const token = req.cookies.get('aaru_auth_token')?.value
-    if (!token) return null
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret-for-jwt") as {
-      id: string
-      email: string
-      role: string
-    }
-    if (!decoded.id) return null
-    return {
-      userId: decoded.id,
-      email: decoded.email,
-      role: decoded.role
-    }
-  } catch (e) {
-    console.error('JWT verification failed:', e)
-    return null
-  }
-}
-
 // GET all addresses for logged in user
 export async function GET(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req)
+    const user = await getAuthUser()
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'Please login to continue' },
@@ -48,7 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const addresses = await prisma.address.findMany({
-      where: { userId: user.userId },
+      where: { userId: user.id },
       orderBy: [
         { isDefault: 'desc' },
         { createdAt: 'desc' }
@@ -69,7 +48,7 @@ export async function GET(req: NextRequest) {
 // POST create new address
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req)
+    const user = await getAuthUser()
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'Please login to continue' },
@@ -85,20 +64,20 @@ export async function POST(req: NextRequest) {
     // If this is set as default, unset all other defaults first
     if (validated.isDefault) {
       await prisma.address.updateMany({
-        where: { userId: user.userId },
+        where: { userId: user.id },
         data: { isDefault: false }
       })
     }
 
     // If this is the first address, make it default automatically
     const existingCount = await prisma.address.count({
-      where: { userId: user.userId }
+      where: { userId: user.id }
     })
 
     const address = await prisma.address.create({
       data: {
         ...validated,
-        userId: user.userId,
+        userId: user.id,
         isDefault: existingCount === 0 ? true : validated.isDefault,
         country: validated.country || 'India'
       }
