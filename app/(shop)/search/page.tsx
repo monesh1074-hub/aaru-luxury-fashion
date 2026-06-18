@@ -15,7 +15,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="bg-background min-h-screen font-body text-text-primary pt-32 pb-24">
+    <div className="bg-background min-h-screen font-body text-text-primary pt-24 sm:pt-28 md:pt-32 pb-16 md:pb-24">
       <div className="max-w-5xl mx-auto px-4 md:px-8 space-y-12">
         <div className="text-center space-y-4">
           <span className="text-gold text-xs uppercase tracking-[0.4em] font-semibold block">Discover</span>

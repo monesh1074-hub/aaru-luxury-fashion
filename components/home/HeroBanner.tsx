@@ -6,7 +6,7 @@ import Link from "next/link"
 
 export const HeroBanner = () => {
   return (
-    <section className="relative h-screen w-full flex items-center justify-center overflow-hidden bg-dark">
+    <section className="relative min-h-[100dvh] sm:min-h-screen w-full flex items-center justify-center overflow-hidden bg-dark">
       {/* Background Image Overlay */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-65 scale-105"
@@ -24,7 +24,7 @@ export const HeroBanner = () => {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-gold uppercase tracking-[0.4em] text-[10px] md:text-xs font-semibold mb-4 block"
+          className="text-gold uppercase tracking-[0.2em] sm:tracking-[0.4em] text-[10px] md:text-xs font-semibold mb-4 block"
         >
           AARU LUXURY ET ENSEMBLES
         </motion.span>
@@ -34,7 +34,7 @@ export const HeroBanner = () => {
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.4 }}
-          className="font-display text-4xl md:text-6xl lg:text-7xl text-background font-semibold tracking-wide leading-tight mb-6"
+          className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl text-background font-semibold tracking-wide leading-tight mb-6"
         >
           Wear the Story. <br />
           <span className="italic font-light text-gold">Live the Art.</span>

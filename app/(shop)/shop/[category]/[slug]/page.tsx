@@ -97,10 +97,10 @@ export default async function ProductDetailPage({ params }: Props) {
   ])
 
   return (
-    <div className="bg-background min-h-screen pt-28">
+    <div className="bg-background min-h-screen pt-20 sm:pt-24 md:pt-28">
       <div className="max-w-7xl mx-auto px-4 md:px-8 pb-24">
         {/* ── Two-column layout: Images LEFT  |  Details RIGHT ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20">
           {/* LEFT — Product photo gallery */}
           <ProductImages images={product.images as { id: string; imageUrl: string; altText?: string | null }[]} />
 

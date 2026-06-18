@@ -86,7 +86,7 @@ export default function AdminProductsPage() {
       </div>
 
       {showForm ? (
-        <div className="bg-white border border-border p-8 max-w-3xl mx-auto shadow-sm">
+        <div className="bg-white border border-border p-4 sm:p-6 md:p-8 max-w-3xl mx-auto shadow-sm">
           <h3 className="font-display text-lg font-semibold uppercase tracking-wider text-dark mb-6 border-b border-border pb-3">
             {editingProduct ? "Edit Product" : "Create New Product"}
           </h3>

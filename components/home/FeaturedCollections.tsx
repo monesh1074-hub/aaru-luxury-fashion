@@ -24,7 +24,7 @@ export const FeaturedCollections = () => {
   ]
 
   return (
-    <section className="py-24 bg-background font-body">
+    <section className="py-16 md:py-24 bg-background font-body">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-gold text-xs uppercase tracking-[0.3em] font-semibold mb-2 block">
@@ -36,12 +36,12 @@ export const FeaturedCollections = () => {
           <div className="w-12 h-0.5 bg-gold mx-auto mt-4" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {collections.map((col, idx) => (
             <Link
               key={idx}
               href={col.href}
-              className="group relative block h-[480px] overflow-hidden bg-dark"
+              className="group relative block h-[320px] sm:h-[400px] lg:h-[480px] overflow-hidden bg-dark"
             >
               {/* Card Image */}
               <div

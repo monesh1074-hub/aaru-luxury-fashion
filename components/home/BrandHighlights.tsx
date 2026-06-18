@@ -8,7 +8,7 @@ export const BrandHighlights = () => {
   return (
     <section className="bg-background font-body">
       {/* 1. Philosophy Highlight */}
-      <div className="py-24 border-t border-border">
+      <div className="py-16 md:py-24 border-t border-border">
         <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <span className="text-gold text-xs uppercase tracking-[0.3em] font-semibold block">
@@ -29,7 +29,7 @@ export const BrandHighlights = () => {
               </Link>
             </div>
           </div>
-          <div className="relative h-[400px] overflow-hidden bg-dark">
+          <div className="relative h-[260px] sm:h-[320px] md:h-[400px] overflow-hidden bg-dark">
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
@@ -41,7 +41,7 @@ export const BrandHighlights = () => {
       </div>
 
       {/* 2. Sixth Element Teaser - Dark Section */}
-      <div className="bg-dark text-background py-28 relative overflow-hidden">
+      <div className="bg-dark text-background py-16 md:py-28 relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-20 scale-105"
           style={{
@@ -70,9 +70,9 @@ export const BrandHighlights = () => {
       </div>
 
       {/* 3. Bespoke Custom Clothing CTA Banner */}
-      <div className="py-24 border-t border-border">
+      <div className="py-16 md:py-24 border-t border-border">
         <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="order-2 md:order-1 relative h-[400px] overflow-hidden bg-dark">
+          <div className="order-2 md:order-1 relative h-[260px] sm:h-[320px] md:h-[400px] overflow-hidden bg-dark">
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{

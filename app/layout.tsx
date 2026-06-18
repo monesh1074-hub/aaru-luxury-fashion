@@ -2,8 +2,7 @@ import React from "react"
 import type { Metadata } from "next"
 import { Playfair_Display, DM_Sans, Cormorant_Garamond } from "next/font/google"
 import { Toaster } from "react-hot-toast"
-import { Navbar } from "@/components/layout/Navbar"
-import { Footer } from "@/components/layout/Footer"
+import { SiteShell } from "@/components/layout/SiteShell"
 import "./globals.css"
 
 const playfair = Playfair_Display({
@@ -27,14 +26,17 @@ export const metadata: Metadata = {
   description: "Celebrated handloom sarees, bespoke lehengas, and designer couture.",
 }
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${playfair.variable} ${dmsans.variable} ${cormorant.variable}`}>
       <body className="bg-background text-text-primary antialiased font-body min-h-screen flex flex-col justify-between">
         <Toaster position="bottom-right" />
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   )

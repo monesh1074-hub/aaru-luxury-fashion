@@ -21,7 +21,7 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({ products }) =>
         <div className="w-12 h-0.5 bg-gold mt-4 block md:hidden mx-auto" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {products.slice(0, 4).map((prod) => (
           <ProductCard key={prod.id} product={prod} />
         ))}

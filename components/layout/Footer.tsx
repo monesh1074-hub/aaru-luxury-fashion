@@ -165,7 +165,7 @@ export const Footer = () => {
         <div>
           &copy; {new Date().getFullYear()} AARU Luxury Fashion. All Rights Reserved.
         </div>
-        <div className="flex space-x-6">
+        <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
           <Link href="/privacy-policy" className="hover:text-gold transition-colors duration-300">
             Privacy Policy
           </Link>

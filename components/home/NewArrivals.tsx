@@ -14,7 +14,8 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ products }) => {
 
   const handleScroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return
-    const scrollAmount = 340
+    const card = scrollContainerRef.current.querySelector<HTMLElement>("[data-card]")
+    const scrollAmount = card ? card.offsetWidth + 24 : 280
     scrollContainerRef.current.scrollBy({
       left: direction === "left" ? -scrollAmount : scrollAmount,
       behavior: "smooth",
@@ -22,7 +23,7 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ products }) => {
   }
 
   return (
-    <section className="py-24 bg-background border-t border-border font-body">
+    <section className="py-16 md:py-24 bg-background border-t border-border font-body">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Header Grid */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-16">
@@ -60,7 +61,7 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ products }) => {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {products.map((prod) => (
-            <div key={prod.id} className="min-w-[280px] md:min-w-[320px] max-w-[320px] snap-start">
+            <div key={prod.id} data-card className="min-w-[75vw] sm:min-w-[280px] md:min-w-[320px] max-w-[320px] snap-start">
               <ProductCard product={prod} />
             </div>
           ))}

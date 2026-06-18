@@ -112,7 +112,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
       <hr className="border-border" />
 
       {/* 2. Fabric & Occasion Meta */}
-      <div className="grid grid-cols-2 gap-4 text-xs tracking-wider uppercase text-text-secondary">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs tracking-wider uppercase text-text-secondary">
         <div>
           <span className="font-bold text-dark block mb-1">Fabric</span>
           <span>{product.fabric || "Pure Indian Silk"}</span>
@@ -131,7 +131,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
             <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary block">
               Color: <span className="text-dark font-semibold">{selectedColor}</span>
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {colors.map((color) => (
                 <button
                   key={color}
@@ -174,7 +174,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
                   key={size}
                   onClick={() => setSelectedSize(size)}
                   className={cn(
-                    "w-12 h-12 border flex items-center justify-center text-[10px] font-semibold transition-all duration-300",
+                    "min-w-[3rem] px-3 py-2 border flex items-center justify-center text-[10px] font-semibold transition-all duration-300 whitespace-nowrap",
                     {
                       "border-dark bg-dark text-background": selectedSize === size,
                       "border-border text-text-secondary hover:border-gold": selectedSize !== size,
@@ -191,7 +191,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
 
       {/* 4. Quantity & Action Buttons */}
       <div className="space-y-4 pt-2">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           {/* Quantity Selector */}
           <div className="flex items-center border border-border h-12">
             <button

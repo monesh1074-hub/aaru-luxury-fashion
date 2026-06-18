@@ -41,7 +41,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "tween", duration: 0.35, ease: "easeInOut" }}
-            className="relative w-4/5 max-w-sm h-full bg-dark text-background flex flex-col p-8 justify-between border-r border-[#262422] z-10"
+            className="relative w-4/5 max-w-sm h-full bg-dark text-background flex flex-col p-6 sm:p-8 justify-between border-r border-[#262422] z-10"
           >
             <div>
               {/* Header */}

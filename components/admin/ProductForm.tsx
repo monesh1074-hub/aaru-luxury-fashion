@@ -313,7 +313,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fabric</label>
                   <select
@@ -383,7 +383,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             <div className="space-y-5">
               <h3 className="font-semibold text-gray-800 text-lg">Pricing</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Original Price (₹) *
@@ -442,8 +442,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
               <div className="space-y-3">
                 {variants.map((variant, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-gray-50 p-3 rounded-lg">
-                    <div className="col-span-3">
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-start bg-gray-50 p-3 rounded-lg">
+                    <div className="lg:col-span-3">
                       <label className="block text-xs text-gray-500 mb-1">Size</label>
                       <select
                         value={variant.size}
@@ -454,7 +454,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                         {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
-                    <div className="col-span-3">
+                    <div className="lg:col-span-3">
                       <label className="block text-xs text-gray-500 mb-1">Color (opt)</label>
                       <input
                         type="text"
@@ -464,7 +464,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                         className="w-full border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                       <label className="block text-xs text-gray-500 mb-1">Stock</label>
                       <input
                         type="number"
@@ -474,7 +474,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                         className="w-full border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="lg:col-span-3">
                       <label className="block text-xs text-gray-500 mb-1">+ Price (₹)</label>
                       <input
                         type="number"
@@ -484,7 +484,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                         className="w-full border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
                       />
                     </div>
-                    <div className="col-span-1 flex items-end justify-center pb-2">
+                    <div className="lg:col-span-1 flex items-end justify-center pb-2 sm:col-span-2 lg:col-span-1">
                       <button
                         type="button"
                         onClick={() => removeVariant(idx)}
