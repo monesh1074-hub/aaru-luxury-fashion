@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import ImageUploader, { UploadedImage } from './ImageUploader'
+import { clearClientProductsCache } from '@/lib/clientProductsCache'
 
 const schema = z.object({
   name: z.string().min(2, 'Product name is required'),
@@ -191,6 +192,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       console.log('Product save result:', result)
 
       if (result.success) {
+        clearClientProductsCache()
         onSuccess()
       } else {
         setError(result.message || 'Failed to save product')

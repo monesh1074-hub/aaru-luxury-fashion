@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/Badge"
 import { Toast } from "@/components/ui/Toast"
 import { formatPrice } from "@/lib/utils"
+import { clearClientProductsCache } from "@/lib/clientProductsCache"
 import { Edit, Trash, Plus } from "lucide-react"
 
 export default function AdminProductsPage() {
@@ -20,10 +21,10 @@ export default function AdminProductsPage() {
     setLoading(true)
     try {
       const [prodRes, catRes] = await Promise.all([
-        axios.get("/api/products?limit=100"), // GET products list
-        axios.get("/api/categories")
+        axios.get("/api/admin/products?limit=100"),
+        axios.get("/api/categories"),
       ])
-      setProducts(prodRes.data?.products || prodRes.data?.data || (Array.isArray(prodRes.data) ? prodRes.data : []))
+      setProducts(prodRes.data?.data || prodRes.data?.products || [])
       setCategories(catRes.data?.categories || catRes.data?.data || (Array.isArray(catRes.data) ? catRes.data : []))
     } catch (err) {
       console.error(err)
@@ -41,6 +42,7 @@ export default function AdminProductsPage() {
     if (!confirm("Are you sure you want to deactivate this product?")) return
     try {
       await axios.delete(`/api/admin/products/${id}`)
+      clearClientProductsCache()
       Toast.success("Product deactivated successfully")
       fetchData()
     } catch (err) {

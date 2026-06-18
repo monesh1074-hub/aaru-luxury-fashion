@@ -5,13 +5,14 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { useWishlistStore } from "@/store/wishlistStore"
 import { WishlistGrid } from "@/components/dashboard/WishlistGrid"
+import { ProductsLoadingSection } from "@/components/product/ProductsLoadingSection"
 import { User, ShoppingBag, Heart, MapPin, LogOut, Settings } from "lucide-react"
 import axios from "axios"
 
 export default function WishlistPage() {
   const { logout, isAuthenticated, token } = useAuth()
   const { items, syncWithServer } = useWishlistStore()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const fetchWishlist = async () => {
     if (!isAuthenticated) return
@@ -86,9 +87,7 @@ export default function WishlistPage() {
           {/* Main content grid */}
           <div className="lg:col-span-9 space-y-6">
             {loading ? (
-              <p className="text-xs uppercase tracking-widest text-text-secondary">
-                Loading wishlist items...
-              </p>
+              <ProductsLoadingSection count={3} message="Loading wishlist..." columns="3" />
             ) : (
               <WishlistGrid items={items} />
             )}

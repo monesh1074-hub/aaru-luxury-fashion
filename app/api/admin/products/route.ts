@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { getAuthUser } from '@/lib/auth'
+import { clearProductsCache } from '@/lib/productsCache'
+
+function revalidateProductPages() {
+  clearProductsCache()
+  revalidatePath('/')
+  revalidatePath('/shop')
+  revalidatePath('/search')
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -193,6 +202,8 @@ export async function POST(req: NextRequest) {
     })
 
     console.log('Product creation complete:', completeProduct?.id)
+
+    revalidateProductPages()
 
     return NextResponse.json({
       success: true,

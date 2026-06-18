@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
 import { clearProductsCache } from "@/lib/productsCache"
+
+function revalidateProductPages(slug?: string, categorySlug?: string) {
+  clearProductsCache()
+  revalidatePath("/")
+  revalidatePath("/shop")
+  revalidatePath("/search")
+  if (categorySlug && slug) {
+    revalidatePath(`/shop/${categorySlug}/${slug}`)
+    revalidatePath(`/shop/${categorySlug}`)
+  }
+}
 
 export async function GET(
   req: NextRequest,
@@ -147,7 +159,7 @@ export async function PUT(
       })
     })
 
-    clearProductsCache()
+    revalidateProductPages(updatedProduct?.slug, updatedProduct?.category?.slug)
 
     return NextResponse.json({
       success: true,
@@ -175,13 +187,22 @@ export async function DELETE(
 
     const { id } = params
 
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      include: { category: true },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ message: "Product not found" }, { status: 404 })
+    }
+
     // Perform a soft-delete (deactivate) to ensure database order history remains valid
     await prisma.product.update({
       where: { id },
       data: { isActive: false }
     })
 
-    clearProductsCache()
+    revalidateProductPages(existing.slug, existing.category?.slug)
 
     return NextResponse.json({
       success: true,

@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { deleteFromCloudinary } from '@/lib/cloudinary'
-import jwt from 'jsonwebtoken'
+import { getAuthUser } from '@/lib/auth'
+import { clearProductsCache } from '@/lib/productsCache'
 
 export const dynamic = 'force-dynamic'
 
-import { getAuthUser } from '@/lib/auth'
+function revalidateProductPages(slug?: string, categorySlug?: string) {
+  clearProductsCache()
+  revalidatePath('/')
+  revalidatePath('/shop')
+  revalidatePath('/search')
+  if (categorySlug && slug) {
+    revalidatePath(`/shop/${categorySlug}/${slug}`)
+    revalidatePath(`/shop/${categorySlug}`)
+  }
+}
 
 // GET single product
 export async function GET(
@@ -111,6 +121,8 @@ export async function PUT(
       include: { category: true, images: true, variants: true }
     })
 
+    revalidateProductPages(complete?.slug, complete?.category?.slug)
+
     return NextResponse.json({
       success: true,
       message: 'Product updated successfully',
@@ -132,37 +144,29 @@ export async function DELETE(
     const user = await getAuthUser()
     if (!user || user.role !== 'ADMIN') return NextResponse.json({ success: false }, { status: 403 })
 
-    // Get images to delete from Cloudinary
-    const images = await prisma.productImage.findMany({
-      where: { productId: params.id }
+    const existing = await prisma.product.findUnique({
+      where: { id: params.id },
+      include: { category: true },
     })
 
-    // Delete from DB (cascade deletes images and variants)
-    await prisma.$transaction([
-      prisma.productImage.deleteMany({ where: { productId: params.id } }),
-      prisma.productVariant.deleteMany({ where: { productId: params.id } }),
-      prisma.wishlist.deleteMany({ where: { productId: params.id } }),
-      prisma.product.delete({ where: { id: params.id } })
-    ])
-
-    // Delete images from Cloudinary
-    for (const image of images) {
-      if (image.imageUrl) {
-        const urlParts = image.imageUrl.split('/upload/')
-        if (urlParts.length === 2) {
-          const pathParts = urlParts[1].split('/')
-          pathParts.shift() // remove version
-          const publicId = pathParts.join('/').split('.')[0]
-          if (publicId) {
-            await deleteFromCloudinary(publicId)
-          }
-        }
-      }
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, message: 'Product not found' },
+        { status: 404 }
+      )
     }
+
+    // Soft-delete so past orders and history stay valid
+    await prisma.product.update({
+      where: { id: params.id },
+      data: { isActive: false },
+    })
+
+    revalidateProductPages(existing.slug, existing.category?.slug)
 
     return NextResponse.json({
       success: true,
-      message: 'Product deleted successfully'
+      message: 'Product deactivated successfully',
     })
 
   } catch (error) {

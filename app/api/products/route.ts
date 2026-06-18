@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
 import { getCachedProducts, setCachedProducts, clearProductsCache } from "@/lib/productsCache"
+
+function revalidateProductPages() {
+  clearProductsCache()
+  revalidatePath("/")
+  revalidatePath("/shop")
+  revalidatePath("/search")
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,10 +23,21 @@ export async function GET(req: NextRequest) {
     const rawMax = searchParams.get("priceMax") || searchParams.get("maxPrice")
     const minPrice = rawMin ? parseFloat(rawMin) : null
     const maxPrice = rawMax ? parseFloat(rawMax) : null
-    // Support both sizes[] array and single fabric/occasion params
-    const sizesParam = searchParams.getAll("sizes")
-    const fabric = searchParams.get("fabrics") || searchParams.get("fabric")
-    const occasion = searchParams.get("occasions") || searchParams.get("occasion")
+    // Support repeated query params for multi-select filters
+    const sizesParam = [
+      ...searchParams.getAll("sizes"),
+      ...searchParams.getAll("sizes[]"),
+    ]
+    const fabricsParam = [
+      ...searchParams.getAll("fabrics"),
+      ...searchParams.getAll("fabrics[]"),
+      ...(searchParams.get("fabric") ? [searchParams.get("fabric")!] : []),
+    ]
+    const occasionsParam = [
+      ...searchParams.getAll("occasions"),
+      ...searchParams.getAll("occasions[]"),
+      ...(searchParams.get("occasion") ? [searchParams.get("occasion")!] : []),
+    ]
     const customizable = searchParams.get("isCustomizable")
     const sort = searchParams.get("sort") // price_asc, price_desc, newest, featured
     const limit = parseInt(searchParams.get("limit") || "12")
@@ -29,7 +48,12 @@ export async function GET(req: NextRequest) {
     const cacheKey = req.url
     const cachedData = getCachedProducts(cacheKey)
     if (cachedData) {
-      return NextResponse.json(cachedData)
+      return NextResponse.json(cachedData, {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "X-Cache": "HIT",
+        },
+      })
     }
 
     // Build Prisma query condition object
@@ -80,12 +104,26 @@ export async function GET(req: NextRequest) {
       where.variants = { some: { size: { in: sizesParam } } }
     }
 
-    if (fabric) {
-      where.fabric = { contains: fabric, mode: "insensitive" }
+    if (fabricsParam.length > 0) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: fabricsParam.map((fabric) => ({
+            fabric: { contains: fabric, mode: "insensitive" },
+          })),
+        },
+      ]
     }
 
-    if (occasion) {
-      where.occasion = { contains: occasion, mode: "insensitive" }
+    if (occasionsParam.length > 0) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: occasionsParam.map((occasion) => ({
+            occasion: { contains: occasion, mode: "insensitive" },
+          })),
+        },
+      ]
     }
 
     if (customizable) {
@@ -132,7 +170,12 @@ export async function GET(req: NextRequest) {
     }
     setCachedProducts(cacheKey, responseData)
 
-    return NextResponse.json(responseData)
+    return NextResponse.json(responseData, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        "X-Cache": "MISS",
+      },
+    })
   } catch (error: any) {
     console.error("Products GET error:", error)
     return NextResponse.json(
@@ -232,6 +275,7 @@ export async function POST(req: NextRequest) {
     })
 
     clearProductsCache()
+    revalidateProductPages()
 
     return NextResponse.json({
       success: true,

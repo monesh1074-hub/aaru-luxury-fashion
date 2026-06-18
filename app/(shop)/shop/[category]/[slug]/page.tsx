@@ -6,6 +6,8 @@ import { ProductImages } from '@/components/product/ProductImages'
 import { RelatedProducts } from '@/components/product/RelatedProducts'
 import type { Metadata } from 'next'
 
+export const revalidate = 60
+
 interface Props {
   params: { category: string; slug: string }
 }

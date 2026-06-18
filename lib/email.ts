@@ -5,8 +5,8 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
   secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_SERVER_USER || 'kamaleshmonesh908@gmail.com',
-    pass: process.env.EMAIL_SERVER_PASSWORD || 'olto xenz qzlu dqde',
+    user: process.env.EMAIL_SERVER_USER,
+    pass: process.env.EMAIL_SERVER_PASSWORD,
   },
 })
 
@@ -20,7 +20,11 @@ export async function sendEmail({
   html: string
 }): Promise<boolean> {
   try {
-    const fromUser = process.env.EMAIL_SERVER_USER || 'kamaleshmonesh908@gmail.com'
+    const fromUser = process.env.EMAIL_SERVER_USER
+    if (!fromUser || !process.env.EMAIL_SERVER_PASSWORD) {
+      console.warn('[Nodemailer] EMAIL_SERVER_USER or EMAIL_SERVER_PASSWORD not configured')
+      return false
+    }
     console.log(`[Nodemailer] Sending email to ${to} | Subject: ${subject}`)
 
     const info = await transporter.sendMail({

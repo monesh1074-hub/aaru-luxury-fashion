@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import axios from "axios"
 import { Product } from "@/types"
+import { getClientCachedProducts, setClientCachedProducts } from "@/lib/clientProductsCache"
 
 interface FilterParams {
   category?: string
@@ -15,33 +16,70 @@ interface FilterParams {
   limit?: number
 }
 
+// Serialize arrays so the API receives repeatable query params
+function serializeParams(params: FilterParams) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return
+    if (Array.isArray(value)) {
+      value.forEach((item) => search.append(key, String(item)))
+    } else {
+      search.append(key, String(value))
+    }
+  })
+  return search.toString()
+}
+
 export function useProducts(initialFilters: FilterParams = {}) {
   const [products, setProducts] = useState<Product[]>([])
-  // Start true so the skeleton shows immediately on first render
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<FilterParams>(initialFilters)
   const [total, setTotal] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestIdRef = useRef(0)
 
   const fetchProducts = useCallback(async (currentFilters: FilterParams) => {
-    setLoading(true)
+    const requestId = ++requestIdRef.current
+
+    // Show cached data instantly for faster perceived load
+    const cached = getClientCachedProducts(currentFilters as Record<string, unknown>)
+    if (cached) {
+      setProducts(cached.products as Product[])
+      setTotal(cached.total)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
     setError(null)
     try {
-      const res = await axios.get("/api/products", { params: currentFilters })
-      setProducts(res.data.products || [])
-      setTotal(res.data.total ?? res.data.pagination?.total ?? 0)
+      const query = serializeParams(currentFilters)
+      const res = await axios.get(`/api/products?${query}`)
+      if (requestId !== requestIdRef.current) return
+
+      const nextProducts = res.data.products || []
+      const nextTotal = res.data.total ?? res.data.pagination?.total ?? 0
+
+      setProducts(nextProducts)
+      setTotal(nextTotal)
+      setClientCachedProducts(currentFilters as Record<string, unknown>, {
+        products: nextProducts,
+        total: nextTotal,
+      })
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) return
       console.error(err)
       setError(err.response?.data?.message || "Failed to fetch products")
-      setProducts([])
+      if (!cached) setProducts([])
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+      }
     }
   }, [])
 
   useEffect(() => {
-    // Debounce by 300ms to avoid hammering the API on rapid filter changes
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       fetchProducts(filters)
@@ -70,4 +108,3 @@ export function useProducts(initialFilters: FilterParams = {}) {
     refetch: () => fetchProducts(filters),
   }
 }
-

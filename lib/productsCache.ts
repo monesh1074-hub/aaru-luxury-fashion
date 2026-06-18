@@ -5,7 +5,7 @@ interface CacheEntry {
 
 // In-memory cache for product listings
 const cache = new Map<string, CacheEntry>()
-const TTL = 30 * 1000 // 30 seconds
+const TTL = 60 * 1000 // 60 seconds server-side cache
 
 export function getCachedProducts(key: string): any | null {
   const entry = cache.get(key)
