@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
+import { withDb } from '@/lib/adminDb'
 
 // GET /api/admin/customers
 export async function GET(req: NextRequest) {
@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const [customers, total] = await Promise.all([
-      prisma.user.findMany({
+    const { customers, total } = await withDb(async (db) => {
+      const rows = await db.user.findMany({
         where,
         select: {
           id: true,
@@ -42,9 +42,10 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
-      }),
-      prisma.user.count({ where }),
-    ])
+      })
+      const count = await db.user.count({ where })
+      return { customers: rows, total: count }
+    })
 
     const formattedCustomers = customers.map((c) => ({
       id: c.id,

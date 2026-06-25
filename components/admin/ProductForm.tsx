@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import ImageUploader, { UploadedImage } from './ImageUploader'
 import { clearClientProductsCache } from '@/lib/clientProductsCache'
+import { useCategories } from '@/hooks/useCategories'
 
 const schema = z.object({
   name: z.string().min(2, 'Product name is required'),
@@ -32,11 +33,6 @@ interface Variant {
   additionalPrice: number
 }
 
-interface Category {
-  id: string
-  name: string
-}
-
 interface ProductFormProps {
   product?: any
   onSuccess: () => void
@@ -52,7 +48,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [variants, setVariants] = useState<Variant[]>([
     { size: 'Free Size', color: '', stockQty: 10, sku: '', additionalPrice: 0 }
   ])
-  const [categories, setCategories] = useState<Category[]>([])
+  const { categories } = useCategories()
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -80,7 +76,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   })
 
   useEffect(() => {
-    fetchCategories()
     if (product) {
       // Pre-load existing images
       if (product.images?.length > 0) {
@@ -101,18 +96,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       }
     }
   }, [product])
-
-  async function fetchCategories() {
-    try {
-      const res = await fetch('/api/categories', { credentials: 'include' })
-      const data = await res.json()
-      if (data.success) {
-        setCategories(data.categories || data.data || [])
-      }
-    } catch (err) {
-      console.error('Failed to load categories:', err)
-    }
-  }
 
   function addVariant() {
     setVariants(prev => [
@@ -556,7 +539,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                   />
                   <div>
                     <span className="block font-medium text-gray-800">New Arrival</span>
-                    <span className="text-xs text-gray-500">Add a "New" badge to this product</span>
+                    <span className="text-xs text-gray-500">Add a &lsquo;New&rsquo; badge to this product</span>
                   </div>
                 </label>
 

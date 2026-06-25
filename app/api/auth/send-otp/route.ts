@@ -190,9 +190,8 @@ export async function POST(req: NextRequest) {
 
     const deliveryChannel = deliveryChannels.length > 0 ? deliveryChannels.join(' & ') : 'None'
 
-    // Always return success — even if delivery fails, the bypass OTP (123456) is always available for testing
     if (!deliverySuccess) {
-      console.warn('[OTP] All delivery channels failed. Returning success anyway — bypass OTP 123456 is active.')
+      console.warn("[OTP] All delivery channels failed.")
     }
 
     const destination = email

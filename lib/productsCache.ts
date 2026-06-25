@@ -1,28 +1,32 @@
+import { buildProductsCacheKey } from "./cacheUtils"
+
 interface CacheEntry {
-  data: any
+  data: unknown
   expiresAt: number
 }
 
-// In-memory cache for product listings
 const cache = new Map<string, CacheEntry>()
-const TTL = 60 * 1000 // 60 seconds server-side cache
+const TTL = 5 * 60 * 1000 // 5 minutes server-side cache
 
-export function getCachedProducts(key: string): any | null {
+export function getCachedProducts(key: string): unknown | null {
   const entry = cache.get(key)
   if (entry && entry.expiresAt > Date.now()) {
     return entry.data
   }
-  if (entry) {
-    cache.delete(key) // clean up expired entry
-  }
+  if (entry) cache.delete(key)
   return null
 }
 
-export function setCachedProducts(key: string, data: any): void {
-  cache.set(key, {
-    data,
-    expiresAt: Date.now() + TTL,
-  })
+export function getCachedProductsByParams(params: Record<string, unknown>): unknown | null {
+  return getCachedProducts(buildProductsCacheKey(params))
+}
+
+export function setCachedProducts(key: string, data: unknown): void {
+  cache.set(key, { data, expiresAt: Date.now() + TTL })
+}
+
+export function setCachedProductsByParams(params: Record<string, unknown>, data: unknown): void {
+  setCachedProducts(buildProductsCacheKey(params), data)
 }
 
 export function clearProductsCache(): void {

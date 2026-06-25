@@ -3,35 +3,23 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import { useWishlistStore } from "@/store/wishlistStore"
+import { useWishlist } from "@/hooks/useWishlist"
 import { WishlistGrid } from "@/components/dashboard/WishlistGrid"
 import { ProductsLoadingSection } from "@/components/product/ProductsLoadingSection"
 import { User, ShoppingBag, Heart, MapPin, LogOut, Settings } from "lucide-react"
-import axios from "axios"
 
 export default function WishlistPage() {
-  const { logout, isAuthenticated, token } = useAuth()
-  const { items, syncWithServer } = useWishlistStore()
+  const { logout, isAuthenticated } = useAuth()
+  const { items, refreshWishlist } = useWishlist()
   const [loading, setLoading] = useState(true)
 
-  const fetchWishlist = async () => {
-    if (!isAuthenticated) return
-    setLoading(true)
-    try {
-      const res = await axios.get("/api/wishlist", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      syncWithServer(res.data.wishlist || [])
-    } catch (err) {
-      console.error("Failed to fetch wishlist:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchWishlist()
-  }, [isAuthenticated])
+    if (!isAuthenticated) {
+      setLoading(false)
+      return
+    }
+    refreshWishlist().finally(() => setLoading(false))
+  }, [isAuthenticated, refreshWishlist])
 
   const navigation = [
     { label: "Overview", href: "/dashboard", icon: User },
@@ -44,7 +32,6 @@ export default function WishlistPage() {
   return (
     <div className="bg-background min-h-screen font-body text-text-primary pt-32 pb-24">
       <div className="max-w-6xl mx-auto px-4 md:px-8">
-        {/* Header */}
         <div className="mb-12 border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <span className="text-gold text-xs uppercase tracking-[0.3em] font-semibold block mb-1.5">
@@ -61,9 +48,7 @@ export default function WishlistPage() {
           </button>
         </div>
 
-        {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Navigation Bar */}
           <nav className="lg:col-span-3 flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-2 border-b lg:border-b-0 lg:border-r border-border pb-4 lg:pb-0 lg:pr-6">
             {navigation.map((nav, idx) => {
               const Icon = nav.icon
@@ -84,7 +69,6 @@ export default function WishlistPage() {
             })}
           </nav>
 
-          {/* Main content grid */}
           <div className="lg:col-span-9 space-y-6">
             {loading ? (
               <ProductsLoadingSection count={3} message="Loading wishlist..." columns="3" />

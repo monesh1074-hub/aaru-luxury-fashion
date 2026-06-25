@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import jwt from 'jsonwebtoken'
-
-// Universal bypass OTP for testing and review environments
-const BYPASS_OTP = '123456'
+import { getJwtSecret } from '@/lib/env'
+import { isOtpBypassAllowed } from '@/lib/otp'
 
 const schema = z.object({
   mobile: z.string().optional(),
@@ -33,8 +32,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Universal bypass OTP — allows testing without SMS delivery
-    const isBypass = otp === BYPASS_OTP
+    const isBypass = isOtpBypassAllowed(otp)
 
     // Find valid OTP (skipped for bypass OTP)
     let otpRecord = null
@@ -74,7 +72,7 @@ export async function POST(req: NextRequest) {
     // Generate JWT token (standardized payload structure)
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "fallback-secret-for-jwt",
+      getJwtSecret(),
       { expiresIn: '7d' }
     )
 

@@ -1,15 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
+import { getCachedCategories, setCachedCategories, clearCategoriesCache } from "@/lib/categoriesCache"
 
 export async function GET(req: NextRequest) {
   try {
+    const cached = getCachedCategories()
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+          "X-Cache": "HIT",
+        },
+      })
+    }
+
     const categories = await prisma.category.findMany({
       where: { isActive: true },
-      orderBy: { sortOrder: "asc" }
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true, sortOrder: true, isActive: true },
     })
 
-    return NextResponse.json({ success: true, categories })
+    const payload = { success: true, categories }
+    setCachedCategories(payload)
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+        "X-Cache": "MISS",
+      },
+    })
   } catch (error) {
     console.error("Categories GET error:", error)
     return NextResponse.json(
@@ -43,20 +63,25 @@ export async function POST(req: NextRequest) {
         parentId,
         imageUrl,
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
-        isActive: true
-      }
+        isActive: true,
+      },
     })
 
-    return NextResponse.json({
-      success: true,
-      message: "Category created successfully",
-      category: newCategory
-    }, { status: 201 })
+    clearCategoriesCache()
 
-  } catch (error: any) {
-    console.error("Category POST error:", error)
     return NextResponse.json(
-      { message: error.code === "P2002" ? "Category slug already exists" : "Internal Server Error" },
+      {
+        success: true,
+        message: "Category created successfully",
+        category: newCategory,
+      },
+      { status: 201 }
+    )
+  } catch (error: unknown) {
+    console.error("Category POST error:", error)
+    const code = error && typeof error === "object" && "code" in error ? (error as { code: string }).code : null
+    return NextResponse.json(
+      { message: code === "P2002" ? "Category slug already exists" : "Internal Server Error" },
       { status: 500 }
     )
   }

@@ -1,42 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
+import {
+  withDb,
+  getCachedDashboardStats,
+  setCachedDashboardStats,
+} from "@/lib/adminDb"
 
 export const dynamic = "force-dynamic"
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const user = await getAuthUser()
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ message: "Unauthorized access" }, { status: 403 })
     }
 
-    // ─── Run ALL queries in PARALLEL (was sequential — 6 round trips → now 1) ───
-    const [
-      paidOrdersRevenue,
-      totalOrdersCount,
-      totalCustomersCount,
-      customInquiriesCount,
-      lowStockAlerts,
-      recentOrders,
-    ] = await Promise.all([
-      // 1. Revenue: aggregate instead of fetching every row
-      prisma.order.aggregate({
+    const cached = getCachedDashboardStats()
+    if (cached) {
+      return NextResponse.json(cached)
+    }
+
+    const payload = await withDb(async (db) => {
+      const paidOrdersRevenue = await db.order.aggregate({
         where: { paymentStatus: "PAID" },
         _sum: { totalAmount: true },
-      }),
+      })
 
-      // 2. Total orders count
-      prisma.order.count(),
+      const totalOrdersCount = await db.order.count()
 
-      // 3. Customers count
-      prisma.user.count({ where: { role: "USER" } }),
+      const totalCustomersCount = await db.user.count({ where: { role: "USER" } })
 
-      // 4. Pending custom inquiries
-      prisma.customOrder.count({ where: { status: "PENDING" } }),
+      const customInquiriesCount = await db.customOrder.count({
+        where: { status: "PENDING" },
+      })
 
-      // 5. Low-stock variants (only fields we need — no include product)
-      prisma.productVariant.findMany({
+      const lowStockAlerts = await db.productVariant.findMany({
         where: { stockQty: { lt: 5 } },
         select: {
           id: true,
@@ -48,10 +46,9 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { stockQty: "asc" },
         take: 10,
-      }),
+      })
 
-      // 6. Recent 5 orders — only select fields we render
-      prisma.order.findMany({
+      const recentOrders = await db.order.findMany({
         select: {
           id: true,
           orderNumber: true,
@@ -63,34 +60,37 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
         take: 5,
-      }),
-    ])
+      })
 
-    return NextResponse.json({
-      metrics: {
-        totalRevenue: paidOrdersRevenue._sum.totalAmount ?? 0,
-        ordersCount: totalOrdersCount,
-        customersCount: totalCustomersCount,
-        customInquiriesCount,
-      },
-      lowStockAlerts: lowStockAlerts.map((v) => ({
-        variantId: v.id,
-        sku: v.sku,
-        size: v.size,
-        color: v.color,
-        stockQty: v.stockQty,
-        productName: v.product.name,
-      })),
-      recentOrders: recentOrders.map((o) => ({
-        id: o.id,
-        orderNumber: o.orderNumber,
-        customerName: o.user.name,
-        totalAmount: o.totalAmount,
-        status: o.status,
-        paymentStatus: o.paymentStatus,
-        createdAt: o.createdAt,
-      })),
+      return {
+        metrics: {
+          totalRevenue: paidOrdersRevenue._sum.totalAmount ?? 0,
+          ordersCount: totalOrdersCount,
+          customersCount: totalCustomersCount,
+          customInquiriesCount,
+        },
+        lowStockAlerts: lowStockAlerts.map((v) => ({
+          variantId: v.id,
+          sku: v.sku,
+          size: v.size,
+          color: v.color,
+          stockQty: v.stockQty,
+          productName: v.product.name,
+        })),
+        recentOrders: recentOrders.map((o) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          customerName: o.user.name,
+          totalAmount: o.totalAmount,
+          status: o.status,
+          paymentStatus: o.paymentStatus,
+          createdAt: o.createdAt,
+        })),
+      }
     })
+
+    setCachedDashboardStats(payload)
+    return NextResponse.json(payload)
   } catch (error) {
     console.error("Dashboard Stats GET error:", error)
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 })

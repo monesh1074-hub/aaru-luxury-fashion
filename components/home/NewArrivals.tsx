@@ -29,10 +29,10 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ products }) => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-16">
           <div className="text-left">
             <span className="text-gold text-xs uppercase tracking-[0.3em] font-semibold mb-2 block">
-              The Season's Best
+              The Season&apos;s Best
             </span>
             <h2 className="font-display text-3xl md:text-4xl text-text-primary tracking-wide">
-              New Arrivals
+              Just In
             </h2>
           </div>
           {/* Slider Controllers */}
@@ -61,8 +61,17 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ products }) => {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {products.map((prod) => (
-            <div key={prod.id} data-card className="min-w-[75vw] sm:min-w-[280px] md:min-w-[320px] max-w-[320px] snap-start">
-              <ProductCard product={prod} />
+            <div key={prod.id} data-card className="min-w-[75vw] sm:min-w-[280px] md:min-w-[320px] max-w-[320px] snap-start group/card">
+              <div className="relative">
+                {prod.isNewArrival && (
+                  <span className="absolute top-6 left-6 z-20 bg-dark text-gold text-[8px] font-bold tracking-widest uppercase px-2 py-1 border border-gold/30">
+                    Trending
+                  </span>
+                )}
+                <div className="transition-transform duration-500 group-hover/card:-translate-y-1">
+                  <ProductCard product={prod} />
+                </div>
+              </div>
             </div>
           ))}
         </div>

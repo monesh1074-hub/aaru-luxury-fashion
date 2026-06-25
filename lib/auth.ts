@@ -2,8 +2,21 @@ import * as bcrypt from "bcryptjs"
 import * as jwt from "jsonwebtoken"
 import { cookies, headers } from "next/headers"
 import { prisma } from "./prisma"
+import { getJwtSecret } from "./env"
 
-const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-for-jwt"
+type AuthUserResult = {
+  id: string
+  name: string
+  email: string
+  mobile: string
+  role: string
+  isVerified: boolean
+  isActive: boolean
+  createdAt: string
+}
+
+const userCache = new Map<string, { user: AuthUserResult; expiresAt: number }>()
+const USER_CACHE_MS = 60_000
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
@@ -14,12 +27,12 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 export function signToken(payload: { id: string; email: string; role: string }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" })
 }
 
 export function verifyToken(token: string): { id: string; email: string; role: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; role: string }
+    return jwt.verify(token, getJwtSecret()) as { id: string; email: string; role: string }
   } catch (error) {
     return null;
   }
@@ -48,6 +61,11 @@ export async function getAuthUser() {
     const decoded = verifyToken(token)
     if (!decoded || !decoded.id) return null
 
+    const cached = userCache.get(decoded.id)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.user
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
@@ -64,10 +82,17 @@ export async function getAuthUser() {
 
     if (!user || !user.isActive) return null
 
-    return {
+    const result: AuthUserResult = {
       ...user,
       createdAt: user.createdAt.toISOString(),
     }
+
+    userCache.set(decoded.id, {
+      user: result,
+      expiresAt: Date.now() + USER_CACHE_MS,
+    })
+
+    return result
   } catch (e) {
     return null
   }

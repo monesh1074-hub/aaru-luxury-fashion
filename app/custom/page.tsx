@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button"
 import { Toast } from "@/components/ui/Toast"
 import { Breadcrumb } from "@/components/ui/Breadcrumb"
 import axios from "axios"
-import { Scissors, Ruler, Sparkles, CheckCircle } from "lucide-react"
+import { Scissors, Ruler, Sparkles, CheckCircle, MessageCircle } from "lucide-react"
+import { WHATSAPP_URL } from "@/lib/constants"
 
 const customOrderSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -155,17 +156,27 @@ export default function CustomClothingPage() {
               <div className="space-y-4 text-xs font-semibold uppercase tracking-widest pt-4 border-t border-border/60">
                 <div className={`flex items-center space-x-3.5 ${step === 1 ? "text-gold" : "text-text-secondary"}`}>
                   <span className="w-6 h-6 border flex items-center justify-center rounded-full">1</span>
-                  <span>Garment Style</span>
+                  <span>Occasion Selection</span>
                 </div>
                 <div className={`flex items-center space-x-3.5 ${step === 2 ? "text-gold" : "text-text-secondary"}`}>
                   <span className="w-6 h-6 border flex items-center justify-center rounded-full">2</span>
-                  <span>Atelier Sizes</span>
+                  <span>Measurements & Fabric</span>
                 </div>
                 <div className={`flex items-center space-x-3.5 ${step === 3 ? "text-gold" : "text-text-secondary"}`}>
                   <span className="w-6 h-6 border flex items-center justify-center rounded-full">3</span>
-                  <span>Contact details</span>
+                  <span>Inspiration & Appointment</span>
                 </div>
               </div>
+
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-8 w-full justify-center py-3 bg-[#25D366] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#20bd5a] transition-all duration-300"
+              >
+                <MessageCircle size={16} />
+                Talk To Designer
+              </a>
             </div>
 
             {/* Right: Interactive Forms */}

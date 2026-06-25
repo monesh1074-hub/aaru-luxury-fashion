@@ -1,5 +1,7 @@
+import { buildProductsCacheKey } from "./cacheUtils"
+
 const STORAGE_PREFIX = "aaru_products_"
-const TTL = 5 * 60 * 1000 // 5 minutes client-side cache
+const TTL = 15 * 60 * 1000 // 15 minutes client-side cache
 
 interface ClientCacheEntry {
   data: {
@@ -9,31 +11,50 @@ interface ClientCacheEntry {
   expiresAt: number
 }
 
-function buildCacheKey(filters: Record<string, unknown>): string {
-  const sorted = Object.keys(filters)
-    .sort()
-    .reduce<Record<string, unknown>>((acc, key) => {
-      const val = filters[key]
-      if (val !== undefined && val !== null && val !== "") {
-        acc[key] = val
-      }
-      return acc
-    }, {})
-  return STORAGE_PREFIX + JSON.stringify(sorted)
+// In-memory layer — instant reads within the same tab session (no JSON parse)
+const memoryCache = new Map<string, ClientCacheEntry>()
+
+function storageKey(filters: Record<string, unknown>): string {
+  return STORAGE_PREFIX + buildProductsCacheKey(filters)
+}
+
+export function isClientCacheFresh(filters: Record<string, unknown>): boolean {
+  const key = buildProductsCacheKey(filters)
+  const mem = memoryCache.get(key)
+  if (mem && mem.expiresAt > Date.now()) return true
+
+  if (typeof window === "undefined") return false
+  try {
+    const raw = sessionStorage.getItem(storageKey(filters))
+    if (!raw) return false
+    const entry: ClientCacheEntry = JSON.parse(raw)
+    return entry.expiresAt > Date.now()
+  } catch {
+    return false
+  }
 }
 
 export function getClientCachedProducts(
   filters: Record<string, unknown>
 ): ClientCacheEntry["data"] | null {
+  const key = buildProductsCacheKey(filters)
+
+  const mem = memoryCache.get(key)
+  if (mem && mem.expiresAt > Date.now()) {
+    return mem.data
+  }
+  if (mem) memoryCache.delete(key)
+
   if (typeof window === "undefined") return null
   try {
-    const raw = sessionStorage.getItem(buildCacheKey(filters))
+    const raw = sessionStorage.getItem(storageKey(filters))
     if (!raw) return null
     const entry: ClientCacheEntry = JSON.parse(raw)
     if (entry.expiresAt > Date.now()) {
+      memoryCache.set(key, entry)
       return entry.data
     }
-    sessionStorage.removeItem(buildCacheKey(filters))
+    sessionStorage.removeItem(storageKey(filters))
   } catch {
     // ignore corrupt cache entries
   }
@@ -44,19 +65,24 @@ export function setClientCachedProducts(
   filters: Record<string, unknown>,
   data: ClientCacheEntry["data"]
 ): void {
+  const key = buildProductsCacheKey(filters)
+  const entry: ClientCacheEntry = {
+    data,
+    expiresAt: Date.now() + TTL,
+  }
+
+  memoryCache.set(key, entry)
+
   if (typeof window === "undefined") return
   try {
-    const entry: ClientCacheEntry = {
-      data,
-      expiresAt: Date.now() + TTL,
-    }
-    sessionStorage.setItem(buildCacheKey(filters), JSON.stringify(entry))
+    sessionStorage.setItem(storageKey(filters), JSON.stringify(entry))
   } catch {
     // sessionStorage full or unavailable
   }
 }
 
 export function clearClientProductsCache(): void {
+  memoryCache.clear()
   if (typeof window === "undefined") return
   try {
     Object.keys(sessionStorage).forEach((key) => {

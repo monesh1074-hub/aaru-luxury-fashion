@@ -53,7 +53,7 @@ export const BrandHighlights = () => {
             The Concept Collection
           </span>
           <h3 className="font-display text-4xl md:text-5xl text-gold font-light italic leading-tight tracking-wide">
-            "The Sixth Element"
+            &ldquo;The Sixth Element&rdquo;
           </h3>
           <p className="text-xs md:text-sm text-[#D9D1C7]/80 max-w-xl mx-auto leading-relaxed tracking-wider">
             An exploration of raw silk coords and organic textured linen layers. Stripped of loud colors, celebrating shadow, structure, and drape.

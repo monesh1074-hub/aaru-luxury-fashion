@@ -1,46 +1,59 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import axios from "axios"
+import React, { useState } from "react"
+import axios from "@/lib/apiClient"
 import { Badge } from "@/components/ui/Badge"
 import { Modal } from "@/components/ui/Modal"
 import { Button } from "@/components/ui/Button"
 import { Toast } from "@/components/ui/Toast"
 import { Scissors, FileText, Image as ImageIcon } from "lucide-react"
+import { useCachedQuery } from "@/hooks/useCachedQuery"
+import { ADMIN_CACHE_TTL } from "@/components/admin/AdminPrefetch"
+
+interface CustomInquiry {
+  id: string
+  name: string
+  email: string
+  phone: string
+  garmentType: string
+  occasion: string
+  fabricPreference?: string
+  colorPreference?: string
+  measurements: Record<string, unknown>
+  referenceImageUrls?: string[]
+  status: string
+}
+
+interface AdminCustomOrdersData {
+  inquiries: CustomInquiry[]
+}
 
 export default function AdminCustomOrdersPage() {
-  const [inquiries, setInquiries] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedMeasurements, setSelectedMeasurements] = useState<any | null>(null)
+  const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, unknown> | null>(null)
   const [selectedImages, setSelectedImages] = useState<string[] | null>(null)
 
-  const fetchInquiries = async () => {
-    try {
+  const { data, loading, refresh } = useCachedQuery<AdminCustomOrdersData>(
+    "admin:custom-orders",
+    async () => {
       const response = await axios.get("/api/custom-orders")
-      setInquiries(response.data?.inquiries || response.data?.data || (Array.isArray(response.data) ? response.data : []))
-    } catch (err) {
-      console.error(err)
-      Toast.error("Failed to load bespoke clothing inquiries")
-    } finally {
-      setLoading(false)
-    }
-  }
+      return { inquiries: response.data?.inquiries || [] }
+    },
+    { ttl: ADMIN_CACHE_TTL }
+  )
 
-  useEffect(() => {
-    fetchInquiries()
-  }, [])
+  const inquiries = data?.inquiries || []
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       await axios.put("/api/custom-orders", { id, status: newStatus })
       Toast.success(`Inquiry status updated to ${newStatus}`)
-      fetchInquiries()
-    } catch (err) {
+      refresh()
+    } catch {
       Toast.error("Failed to update inquiry status")
     }
   }
 
-  if (loading) {
+  if (loading && inquiries.length === 0) {
     return (
       <div className="space-y-6 animate-pulse font-body">
         <div className="h-8 w-40 bg-border/40" />
@@ -53,7 +66,6 @@ export default function AdminCustomOrdersPage() {
 
   return (
     <div className="space-y-8 font-body">
-      {/* Header */}
       <div>
         <span className="text-gold text-xs uppercase tracking-[0.4em] font-semibold block mb-1.5">
           Bespoke Atelier
@@ -65,7 +77,6 @@ export default function AdminCustomOrdersPage() {
         <div className="w-12 h-0.5 bg-gold mt-3" />
       </div>
 
-      {/* Inquiries Table */}
       <div className="bg-white border border-border shadow-sm overflow-x-auto">
         <table className="w-full text-left text-xs uppercase tracking-wider border-collapse">
           <thead>
@@ -116,7 +127,7 @@ export default function AdminCustomOrdersPage() {
                   <td className="p-4 text-center">
                     {inquiry.referenceImageUrls && inquiry.referenceImageUrls.length > 0 ? (
                       <button
-                        onClick={() => setSelectedImages(inquiry.referenceImageUrls)}
+                        onClick={() => setSelectedImages(inquiry.referenceImageUrls!)}
                         className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-dark hover:text-gold border border-border px-3 py-1.5 bg-white shadow-sm transition-colors"
                       >
                         <ImageIcon size={12} />
@@ -161,7 +172,6 @@ export default function AdminCustomOrdersPage() {
         </table>
       </div>
 
-      {/* Measurements Detail Modal */}
       {selectedMeasurements && (
         <Modal
           isOpen={true}
@@ -170,13 +180,13 @@ export default function AdminCustomOrdersPage() {
         >
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4 text-xs">
-              {Object.entries(selectedMeasurements).map(([key, val]: [string, any]) => (
+              {Object.entries(selectedMeasurements).map(([key, val]) => (
                 <div key={key} className="border-b border-border pb-1.5">
                   <span className="font-semibold text-text-secondary uppercase tracking-wider block text-[10px]">
                     {key.replace(/([A-Z])/g, " $1")}
                   </span>
                   <span className="text-dark font-bold font-accent text-sm">
-                    {val || "-"}
+                    {String(val ?? "-")}
                   </span>
                 </div>
               ))}
@@ -188,7 +198,6 @@ export default function AdminCustomOrdersPage() {
         </Modal>
       )}
 
-      {/* Reference Images Modal */}
       {selectedImages && (
         <Modal
           isOpen={true}

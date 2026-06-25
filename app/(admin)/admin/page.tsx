@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import axios from "axios"
+import React from "react"
+import axios from "@/lib/apiClient"
 import { DashboardStats } from "@/components/admin/DashboardStats"
 import { formatPrice } from "@/lib/utils"
 import Link from "next/link"
 import { ArrowRight, AlertTriangle } from "lucide-react"
+import { useCachedQuery } from "@/hooks/useCachedQuery"
+import { ADMIN_CACHE_TTL } from "@/components/admin/AdminPrefetch"
 
 interface DashboardData {
   metrics: {
@@ -34,25 +36,16 @@ interface DashboardData {
 }
 
 export default function AdminDashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, loading, error } = useCachedQuery<DashboardData>(
+    "admin:dashboard",
+    async () => {
+      const response = await axios.get("/api/admin/dashboard")
+      return response.data
+    },
+    { ttl: ADMIN_CACHE_TTL }
+  )
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const response = await axios.get("/api/admin/dashboard")
-        setData(response.data)
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to load dashboard statistics")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDashboardData()
-  }, [])
-
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-10 w-48 bg-border/40" />
@@ -62,7 +55,7 @@ export default function AdminDashboardPage() {
     )
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="border border-error bg-error/5 text-error p-6 uppercase tracking-wider text-xs font-semibold">
         {error}
@@ -79,7 +72,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-10 font-body">
-      {/* Header */}
       <div>
         <span className="text-gold text-xs uppercase tracking-[0.4em] font-semibold block mb-1.5">
           Overview
@@ -90,12 +82,9 @@ export default function AdminDashboardPage() {
         <div className="w-12 h-0.5 bg-gold mt-3" />
       </div>
 
-      {/* Numerical Metrics Grid */}
       <DashboardStats stats={stats} />
 
-      {/* Alerts and Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Recent Orders List */}
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-dark">
@@ -103,6 +92,7 @@ export default function AdminDashboardPage() {
             </h3>
             <Link
               href="/admin/orders"
+              prefetch
               className="text-[10px] uppercase tracking-wider font-bold text-gold hover:text-dark flex items-center gap-1.5 transition-colors"
             >
               <span>Manage Orders</span>
@@ -148,7 +138,6 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* Low Stock Alerts */}
         <div className="lg:col-span-4 space-y-4">
           <div className="border-b border-border pb-3">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-dark flex items-center gap-2">

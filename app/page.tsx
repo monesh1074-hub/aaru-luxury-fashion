@@ -1,9 +1,18 @@
 import React from "react"
 import { prisma } from "@/lib/prisma"
+import { toIso } from "@/lib/dateUtils"
 import { HeroBanner } from "@/components/home/HeroBanner"
+import { BrandValuesStrip } from "@/components/home/BrandValuesStrip"
+import { BrandStorySection } from "@/components/home/BrandStorySection"
 import { FeaturedCollections } from "@/components/home/FeaturedCollections"
 import { NewArrivals } from "@/components/home/NewArrivals"
-import { BrandHighlights } from "@/components/home/BrandHighlights"
+import { ShopByCategory } from "@/components/home/ShopByCategory"
+import { DesignerShowcase } from "@/components/home/DesignerShowcase"
+import { ReadyToShip } from "@/components/home/ReadyToShip"
+import { ShopTheLook } from "@/components/home/ShopTheLook"
+import { Testimonials } from "@/components/home/Testimonials"
+import { InstagramFeed } from "@/components/home/InstagramFeed"
+import { NewsletterSection } from "@/components/home/NewsletterSection"
 
 export const revalidate = 60
 
@@ -22,12 +31,12 @@ async function getFeaturedProducts() {
 
     return products.map((prod) => ({
       ...prod,
-      createdAt: prod.createdAt.toISOString(),
-      updatedAt: prod.updatedAt.toISOString(),
+      createdAt: toIso(prod.createdAt),
+      updatedAt: toIso(prod.updatedAt),
       category: prod.category
         ? {
             ...prod.category,
-            createdAt: prod.category.createdAt.toISOString(),
+            createdAt: toIso(prod.category.createdAt),
           }
         : undefined,
     }))
@@ -153,11 +162,19 @@ export default async function HomePage() {
   const products = await getFeaturedProducts()
 
   return (
-    <div className="bg-background min-h-screen overflow-hidden">
+    <div className="bg-background min-h-screen overflow-hidden pb-16 lg:pb-0">
       <HeroBanner />
+      <BrandValuesStrip />
+      <BrandStorySection />
       <FeaturedCollections />
       <NewArrivals products={products as any} />
-      <BrandHighlights />
+      <ShopByCategory />
+      <DesignerShowcase />
+      <ReadyToShip products={products as any} />
+      <ShopTheLook />
+      <Testimonials />
+      <InstagramFeed />
+      <NewsletterSection />
     </div>
   )
 }

@@ -1,25 +1,23 @@
 "use client"
 
-import React from "react"
+import React, { useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Heart } from "lucide-react"
-import { useWishlistStore } from "@/store/wishlistStore"
-import { useAuthStore } from "@/store/authStore"
+import { useWishlist } from "@/hooks/useWishlist"
 import { Product } from "@/types"
 import { formatPrice, cn } from "@/lib/utils"
-import { Toast } from "../ui/Toast"
-import axios from "axios"
 
 interface ProductCardProps {
   product: Product
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { items, toggleItem, removeItem, addItem } = useWishlistStore()
-  const { isAuthenticated, token } = useAuthStore()
+  const router = useRouter()
+  const { isWishlisted, toggleWishlist } = useWishlist()
 
-  const isWishlisted = items.some((item) => item.productId === product.id)
+  const wishlisted = isWishlisted(product.id)
   const primaryImage =
     product.images?.find((img) => img.isPrimary)?.imageUrl ||
     product.images?.[0]?.imageUrl ||
@@ -28,51 +26,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
-    // Add/remove locally
-    const dummyWishlistItem = {
-      id: Math.random().toString(),
-      userId: "",
-      productId: product.id,
-      product,
-      createdAt: new Date().toISOString(),
-    }
-
-    if (isWishlisted) {
-      removeItem(product.id)
-      Toast.success("Removed from wishlist")
-    } else {
-      addItem(dummyWishlistItem)
-      Toast.success("Added to wishlist")
-    }
-
-    // Update server-side if logged in
-    if (isAuthenticated) {
-      try {
-        await axios.post(
-          "/api/wishlist",
-          { productId: product.id },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-      } catch (err) {
-        console.error("Failed to sync wishlist on server:", err)
-      }
-    }
+    await toggleWishlist(product)
   }
 
   const categorySlug = product.category?.slug || "general"
   const price = product.salePrice || product.basePrice
+  const productHref = `/shop/${categorySlug}/${product.slug}`
+
+  const prefetchProduct = useCallback(() => {
+    router.prefetch(productHref)
+  }, [router, productHref])
 
   return (
     <div className="group relative font-body flex flex-col justify-between h-full bg-background border border-border/25 p-3">
-      <Link href={`/shop/${categorySlug}/${product.slug}`} className="block relative overflow-hidden bg-border/20 aspect-[3/4]">
+      <Link
+        href={productHref}
+        prefetch
+        onMouseEnter={prefetchProduct}
+        onFocus={prefetchProduct}
+        className="block relative overflow-hidden bg-border/20 aspect-[3/4] active:opacity-90 transition-opacity duration-150"
+      >
         {/* Wishlist Button */}
         <button
           onClick={handleWishlistToggle}
           className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white text-dark hover:text-gold transition-colors duration-200 shadow-md rounded-full"
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
-          <Heart size={16} className={cn({ "fill-gold text-gold": isWishlisted })} />
+          <Heart size={16} className={cn({ "fill-gold text-gold": wishlisted })} />
         </button>
 
         {/* Product Image */}
@@ -101,7 +81,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.category?.name || "Couture"}
         </span>
         <h4 className="font-display text-sm font-semibold tracking-wide text-text-primary mb-2 line-clamp-1">
-          {product.name}
+          <Link
+            href={productHref}
+            prefetch
+            onMouseEnter={prefetchProduct}
+            className="hover:text-gold transition-colors duration-200"
+          >
+            {product.name}
+          </Link>
         </h4>
         <div className="flex items-center space-x-2.5">
           <span className="font-accent text-base text-gold font-bold">

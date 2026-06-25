@@ -29,7 +29,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
       }
     }
     loadOrder()
-  }, [params.id])
+  }, [params.id, fetchOrderById])
 
   const navigation = [
     { label: "Overview", href: "/dashboard", icon: User },

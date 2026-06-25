@@ -14,7 +14,7 @@ export default function AboutPage() {
             Who We Are
           </span>
           <h1 className="font-display text-4xl md:text-5xl font-light tracking-wide leading-tight text-dark">
-            "A dialogue between ancient hands and modern silhouettes."
+            &ldquo;A dialogue between ancient hands and modern silhouettes.&rdquo;
           </h1>
           <div className="w-16 h-0.5 bg-gold mx-auto mt-6" />
         </div>

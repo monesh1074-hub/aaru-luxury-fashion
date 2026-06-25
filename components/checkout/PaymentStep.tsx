@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useCart } from "@/hooks/useCart"
 import { Button } from "../ui/Button"
 import { formatPrice } from "@/lib/utils"
@@ -19,23 +19,69 @@ interface PaymentStepProps {
   onPrev: () => void
 }
 
+interface Quote {
+  subtotal: number
+  discountAmount: number
+  gstAmount: number
+  shippingCharge: number
+  totalAmount: number
+  couponApplied: boolean
+}
+
 export const PaymentStep: React.FC<PaymentStepProps> = ({
   couponCode,
   onPaymentSuccess,
   onPrev,
 }) => {
-  const { totalPrice } = useCart()
+  const { items } = useCart()
   const { token, user } = useAuthStore()
   const [loading, setLoading] = useState(false)
+  const [quoteLoading, setQuoteLoading] = useState(true)
+  const [quote, setQuote] = useState<Quote | null>(null)
 
-  // Calculations
-  let discount = 0
-  if (couponCode === "AARU10" && totalPrice >= 5000) discount = Math.round(totalPrice * 0.1)
-  if (couponCode === "WELCOME200" && totalPrice >= 2000) discount = 200
+  useEffect(() => {
+    if (items.length === 0) {
+      setQuote(null)
+      setQuoteLoading(false)
+      return
+    }
 
-  const shipping = totalPrice > 10000 ? 0 : 250
-  const gst = Math.round((totalPrice - discount) * 0.12)
-  const finalTotal = totalPrice - discount + shipping + gst
+    let cancelled = false
+    setQuoteLoading(true)
+
+    axios
+      .post(
+        "/api/checkout/quote",
+        {
+          items: items.map((i) => ({
+            productId: i.productId,
+            variantId: i.variantId,
+            quantity: i.quantity,
+          })),
+          couponCode,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then((res) => {
+        if (!cancelled) setQuote(res.data)
+      })
+      .catch(() => {
+        if (!cancelled) Toast.error("Unable to calculate order total")
+      })
+      .finally(() => {
+        if (!cancelled) setQuoteLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [items, couponCode, token])
+
+  const finalTotal = quote?.totalAmount ?? 0
+  const discount = quote?.discountAmount ?? 0
+  const gst = quote?.gstAmount ?? 0
+  const shipping = quote?.shippingCharge ?? 0
+  const subtotal = quote?.subtotal ?? 0
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -45,12 +91,16 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
       script.onerror = () => resolve(false)
       document.body.appendChild(script)
     })
-  };
+  }
 
   const handlePayment = async () => {
+    if (!quote) {
+      Toast.error("Order total is not ready yet")
+      return
+    }
+
     setLoading(true)
     try {
-      // 1. Create order on server
       const orderRes = await axios.post(
         "/api/payments/create-order",
         { amount: finalTotal },
@@ -64,7 +114,6 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
       const { id: gatewayOrderId, amount, currency } = orderRes.data.order
       const keyId = orderRes.data.keyId
 
-      // 2. Load SDK script
       const scriptLoaded = await loadRazorpayScript()
       if (!scriptLoaded) {
         Toast.error("Razorpay SDK failed to load. Check your internet connection.")
@@ -72,50 +121,47 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
         return
       }
 
-      // Detect mock order (no real Razorpay key configured)
       const isMockOrder = !gatewayOrderId || gatewayOrderId.startsWith("rzp_mock_order_")
 
-      // 3. Open Razorpay widget modal
-      const options: any = {
+      const options: Record<string, unknown> = {
         key: isMockOrder ? "rzp_test_5gX8Wn9Z2cK4L1" : (keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID),
         amount,
         currency,
         name: "AARU Luxury",
         description: "Bespoke Indian Fashion",
-        // Only pass order_id for real orders — mock orders omit it so the SDK opens freely
         ...(isMockOrder ? {} : { order_id: gatewayOrderId }),
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
           contact: user?.mobile || "",
         },
-        // Ensure UPI is displayed prominently
         config: {
           display: {
             blocks: {
               upi: {
                 name: "Pay via UPI",
-                instruments: [
-                  { method: "upi" }
-                ]
+                instruments: [{ method: "upi" }],
               },
               other: {
                 name: "Other Payment Modes",
                 instruments: [
                   { method: "card" },
                   { method: "netbanking" },
-                  { method: "wallet" }
-                ]
-              }
+                  { method: "wallet" },
+                ],
+              },
             },
             sequence: ["block.upi", "block.other"],
-            preferences: { show_default_blocks: false }
-          }
+            preferences: { show_default_blocks: false },
+          },
         },
-        theme: {
-          color: "#C9A96E",
-        },
-        handler: async (response: any) => {
+        theme: { color: "#C9A96E" },
+        handler: async (response: {
+          razorpay_order_id: string
+          razorpay_payment_id?: string
+          razorpay_signature?: string
+          method?: string
+        }) => {
           try {
             const verifyRes = await axios.post(
               "/api/payments/verify",
@@ -151,15 +197,16 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
         },
       }
 
-      const paymentObject = new (window as any).Razorpay(options)
+      const RazorpayCtor = (window as unknown as { Razorpay: new (opts: Record<string, unknown>) => { open: () => void } }).Razorpay
+      const paymentObject = new RazorpayCtor(options)
       paymentObject.open()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error)
-      Toast.error(error.message || "Razorpay initialization failed.")
+      const message = error instanceof Error ? error.message : "Razorpay initialization failed."
+      Toast.error(message)
       setLoading(false)
     }
   }
-
 
   return (
     <div className="space-y-8 font-body text-text-primary">
@@ -176,40 +223,49 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
         <h4 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary border-b border-border/60 pb-2.5">
           Order Payment Summary
         </h4>
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span className="font-medium">{formatPrice(totalPrice)}</span>
-          </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-success">
-              <span>Coupon Discount</span>
-              <span>-{formatPrice(discount)}</span>
+        {quoteLoading ? (
+          <p className="text-xs text-text-secondary">Calculating totals...</p>
+        ) : (
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span className="font-medium">{formatPrice(subtotal)}</span>
             </div>
-          )}
-          <div className="flex justify-between">
-            <span>Taxes (12% GST)</span>
-            <span className="font-medium">{formatPrice(gst)}</span>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <span>Coupon Discount</span>
+                <span>-{formatPrice(discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>Taxes (12% GST)</span>
+              <span className="font-medium">{formatPrice(gst)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Shipping</span>
+              <span className="font-medium">
+                {shipping === 0 ? "FREE" : formatPrice(shipping)}
+              </span>
+            </div>
+            <hr className="border-border/60 my-1" />
+            <div className="flex justify-between text-sm font-semibold uppercase tracking-wide">
+              <span>Total Payable</span>
+              <span className="font-accent text-gold font-bold">{formatPrice(finalTotal)}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span>Shipping</span>
-            <span className="font-medium">
-              {shipping === 0 ? "FREE" : formatPrice(shipping)}
-            </span>
-          </div>
-          <hr className="border-border/60 my-1" />
-          <div className="flex justify-between text-sm font-semibold uppercase tracking-wide">
-            <span>Total Payable</span>
-            <span className="font-accent text-gold font-bold">{formatPrice(finalTotal)}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="flex gap-4">
         <Button variant="outline" onClick={onPrev} className="w-1/2" disabled={loading}>
           Back to Address
         </Button>
-        <Button onClick={handlePayment} loading={loading} className="w-1/2">
+        <Button
+          onClick={handlePayment}
+          loading={loading}
+          className="w-1/2"
+          disabled={quoteLoading || !quote}
+        >
           Pay with Razorpay
         </Button>
       </div>

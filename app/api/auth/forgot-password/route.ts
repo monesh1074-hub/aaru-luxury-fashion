@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { hashPassword } from "@/lib/auth"
-
-// Universal bypass OTP for testing and review environments
-const BYPASS_OTP = '123456'
+import { isOtpBypassAllowed } from "@/lib/otp"
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,8 +25,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Universal bypass OTP — skip DB verification
-    const isBypass = otpCode.trim() === BYPASS_OTP
+    const isBypass = isOtpBypassAllowed(otpCode.trim())
 
     // Find the latest active forgot password OTP (only if not bypass)
     let verification = null

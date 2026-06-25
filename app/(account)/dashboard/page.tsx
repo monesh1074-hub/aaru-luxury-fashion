@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { useOrders } from "@/hooks/useOrders"
@@ -9,11 +9,7 @@ import { User, ShoppingBag, Heart, MapPin, LogOut, ShieldCheck, Settings } from 
 
 export default function AccountDashboardPage() {
   const { user, logout } = useAuth()
-  const { orders, fetchOrders, loading } = useOrders()
-
-  useEffect(() => {
-    fetchOrders()
-  }, [])
+  const { orders, loading } = useOrders()
 
   const navigation = [
     { label: "Overview", href: "/dashboard", icon: User, active: true },

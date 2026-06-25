@@ -66,9 +66,11 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log('===========================================')
-    console.log(`[REGISTER OTP] for ${user.mobile}: ${otpCode}`)
-    console.log('===========================================')
+    if (process.env.NODE_ENV === "development") {
+      console.log("===========================================")
+      console.log(`[REGISTER OTP] for ${user.mobile}: ${otpCode}`)
+      console.log("===========================================")
+    }
 
     // Dispatch OTP (Fast2SMS & SendGrid)
     await sendSMS(user.mobile, otpCode)

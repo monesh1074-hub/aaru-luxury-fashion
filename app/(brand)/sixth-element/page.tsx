@@ -60,7 +60,7 @@ export default function SixthElementPage() {
         {/* 3. Concept Quotes */}
         <div className="border-t border-[#262422] pt-20 text-center space-y-6 max-w-2xl mx-auto">
           <span className="font-display text-4xl text-gold font-light italic">
-            "Structure is the language of silence."
+            &ldquo;Structure is the language of silence.&rdquo;
           </span>
           <p className="text-xs text-[#736C63] tracking-widest uppercase">
             — Moni, Creative Director

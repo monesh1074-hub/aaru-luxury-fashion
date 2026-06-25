@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
-import { getCachedProducts, setCachedProducts, clearProductsCache } from "@/lib/productsCache"
+import {
+  getCachedProductsByParams,
+  setCachedProductsByParams,
+  clearProductsCache,
+} from "@/lib/productsCache"
+import { resolveCategorySlug } from "@/lib/categorySlugs"
+import { queryProductsList, type ProductListFilters } from "@/lib/productsList"
 
 function revalidateProductPages() {
   clearProductsCache()
@@ -16,7 +22,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
 
     // Retrieve search filters from URL parameters
-    const categorySlug = searchParams.get("category")
+    const rawCategorySlug = searchParams.get("category")
+    const categorySlug = rawCategorySlug ? resolveCategorySlug(rawCategorySlug) : null
     const search = searchParams.get("search")
     // Support both priceMin/priceMax (from useProducts hook) and minPrice/maxPrice
     const rawMin = searchParams.get("priceMin") || searchParams.get("minPrice")
@@ -38,145 +45,68 @@ export async function GET(req: NextRequest) {
       ...searchParams.getAll("occasions[]"),
       ...(searchParams.get("occasion") ? [searchParams.get("occasion")!] : []),
     ]
-    const customizable = searchParams.get("isCustomizable")
-    const sort = searchParams.get("sort") // price_asc, price_desc, newest, featured
+    const readyToShip = searchParams.get("readyToShip")
+    const onSale = searchParams.get("sale")
+    const colorsParam = [
+      ...searchParams.getAll("colors"),
+      ...searchParams.getAll("colors[]"),
+    ]
+    const sort = searchParams.get("sort")
     const limit = parseInt(searchParams.get("limit") || "12")
     const page = parseInt(searchParams.get("page") || "1")
-    const skip = (page - 1) * limit
 
-    // Cache lookup using full URL as key
-    const cacheKey = req.url
-    const cachedData = getCachedProducts(cacheKey)
+    const cacheParams: Record<string, unknown> = {
+      category: categorySlug,
+      search,
+      priceMin: minPrice,
+      priceMax: maxPrice,
+      sizes: sizesParam,
+      fabrics: fabricsParam,
+      occasions: occasionsParam,
+      colors: colorsParam,
+      readyToShip: readyToShip === "true" ? true : undefined,
+      sale: onSale === "true" ? true : undefined,
+      sort,
+      limit,
+      page,
+    }
+
+    const cachedData = getCachedProductsByParams(cacheParams)
     if (cachedData) {
       return NextResponse.json(cachedData, {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
           "X-Cache": "HIT",
         },
       })
     }
 
-    // Build Prisma query condition object
-    const where: any = { isActive: true }
-
-    if (categorySlug) {
-      where.category = { slug: categorySlug }
+    const listFilters: ProductListFilters = {
+      category: categorySlug || undefined,
+      search: search || undefined,
+      priceMin: minPrice,
+      priceMax: maxPrice,
+      sizes: sizesParam.length ? sizesParam : undefined,
+      fabrics: fabricsParam.length ? fabricsParam : undefined,
+      occasions: occasionsParam.length ? occasionsParam : undefined,
+      colors: colorsParam.length ? colorsParam : undefined,
+      readyToShip: readyToShip === "true" ? true : undefined,
+      sale: onSale === "true" ? true : undefined,
+      sort: sort || undefined,
+      limit,
+      page,
     }
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } }
-      ]
-    }
-
-    // Apply price filtering on active price (salePrice if exists, otherwise basePrice)
-    if (minPrice !== null || maxPrice !== null) {
-      const salePriceCond: any = { not: null }
-      const basePriceCond: any = {}
-
-      if (minPrice !== null) {
-        salePriceCond.gte = minPrice
-        basePriceCond.gte = minPrice
-      }
-      if (maxPrice !== null) {
-        salePriceCond.lte = maxPrice
-        basePriceCond.lte = maxPrice
-      }
-
-      where.AND = [
-        {
-          OR: [
-            {
-              salePrice: salePriceCond
-            },
-            {
-              salePrice: null,
-              basePrice: basePriceCond
-            }
-          ]
-        }
-      ]
-    }
-
-    // Size filter (multi-value)
-    if (sizesParam.length > 0) {
-      where.variants = { some: { size: { in: sizesParam } } }
-    }
-
-    if (fabricsParam.length > 0) {
-      where.AND = [
-        ...(where.AND || []),
-        {
-          OR: fabricsParam.map((fabric) => ({
-            fabric: { contains: fabric, mode: "insensitive" },
-          })),
-        },
-      ]
-    }
-
-    if (occasionsParam.length > 0) {
-      where.AND = [
-        ...(where.AND || []),
-        {
-          OR: occasionsParam.map((occasion) => ({
-            occasion: { contains: occasion, mode: "insensitive" },
-          })),
-        },
-      ]
-    }
-
-    if (customizable) {
-      where.isCustomizable = customizable === "true"
-    }
-
-    // Determine sorting options
-    let orderBy: any = { createdAt: "desc" }
-    if (sort === "price_asc") {
-      orderBy = { basePrice: "asc" }
-    } else if (sort === "price_desc") {
-      orderBy = { basePrice: "desc" }
-    } else if (sort === "featured") {
-      orderBy = { isFeatured: "desc" }
-    } else if (sort === "newest") {
-      orderBy = { createdAt: "desc" }
-    }
-
-    // Fetch products
-    const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: {
-          images: { orderBy: { sortOrder: "asc" } },
-          variants: true,
-          category: true
-        },
-        orderBy,
-        take: limit,
-        skip
-      }),
-      prisma.product.count({ where })
-    ])
-
-    const responseData = {
-      products,
-      total: totalCount, // top-level for useProducts hook compatibility
-      pagination: {
-        total: totalCount,
-        page,
-        limit,
-        totalPages: Math.ceil(totalCount / limit)
-      }
-    }
-    setCachedProducts(cacheKey, responseData)
+    const responseData = await queryProductsList(listFilters)
+    setCachedProductsByParams(cacheParams, responseData)
 
     return NextResponse.json(responseData, {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         "X-Cache": "MISS",
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Products GET error:", error)
     return NextResponse.json(
       { message: "Internal Server Error" },

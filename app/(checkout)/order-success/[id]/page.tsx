@@ -14,7 +14,7 @@ export default function OrderSuccessPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     fetchOrderById(params.id).then(setOrder).catch(console.error).finally(() => setLoading(false))
-  }, [params.id])
+  }, [params.id, fetchOrderById])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-text-secondary text-sm">Loading order confirmation...</div>
 

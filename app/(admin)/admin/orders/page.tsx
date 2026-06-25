@@ -1,41 +1,51 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import axios from "axios"
+import React from "react"
+import axios from "@/lib/apiClient"
 import { OrderTable } from "@/components/admin/OrderTable"
 import { Toast } from "@/components/ui/Toast"
+import { useCachedQuery } from "@/hooks/useCachedQuery"
+import { clearClientCache } from "@/lib/clientCache"
+import { clearDashboardStatsCache } from "@/lib/adminDb"
+import { ADMIN_CACHE_TTL } from "@/components/admin/AdminPrefetch"
+import { Order } from "@/types"
+
+interface AdminOrdersData {
+  orders: Order[]
+}
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, refresh } = useCachedQuery<AdminOrdersData>(
+    "admin:orders",
+    async () => {
+      const response = await axios.get("/api/admin/orders?limit=50")
+      return { orders: response.data?.data?.orders || [] }
+    },
+    { ttl: ADMIN_CACHE_TTL }
+  )
 
-  const fetchOrders = async () => {
-    try {
-      const response = await axios.get("/api/admin/orders")
-      setOrders(response.data?.data?.orders || [])
-    } catch (err) {
-      console.error(err)
-      Toast.error("Failed to load customer orders")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchOrders()
-  }, [])
+  const orders = data?.orders || []
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
       await axios.put(`/api/orders/${orderId}`, { status: newStatus })
       Toast.success(`Order status updated to ${newStatus}`)
-      fetchOrders() // Refresh order data
-    } catch (err: any) {
-      Toast.error(err.response?.data?.message || "Failed to update order status")
+      clearClientCache("admin:dashboard")
+      clearDashboardStatsCache()
+      refresh()
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+          ? (err as { response: { data: { message: string } } }).response.data.message
+          : "Failed to update order status"
+      Toast.error(message)
     }
   }
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <div className="space-y-6 animate-pulse font-body">
         <div className="h-8 w-40 bg-border/40" />
@@ -46,7 +56,6 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-8 font-body">
-      {/* Header */}
       <div>
         <span className="text-gold text-xs uppercase tracking-[0.4em] font-semibold block mb-1.5">
           Sales & Fulfillment
@@ -57,7 +66,6 @@ export default function AdminOrdersPage() {
         <div className="w-12 h-0.5 bg-gold mt-3" />
       </div>
 
-      {/* Orders List Table Component */}
       <OrderTable orders={orders} onStatusChange={handleStatusChange} />
     </div>
   )

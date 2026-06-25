@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { getJwtSecret } from "./lib/env"
 
 // Helper to base64url decode a string into a Uint8Array
 function base64UrlDecode(str: string): Uint8Array {
@@ -100,7 +101,7 @@ export async function middleware(req: NextRequest) {
   if (isAuthRoute || isAdminRoute) {
     try {
       // Verify JWT signature with correct secret using Web Crypto
-      const secret = process.env.JWT_SECRET || "fallback-secret-for-jwt"
+      const secret = getJwtSecret()
       const payload = await verifyToken(token!, secret)
 
       // Check role for admin routes

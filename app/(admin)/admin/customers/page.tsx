@@ -1,30 +1,39 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import axios from "axios"
+import React from "react"
+import axios from "@/lib/apiClient"
 import { Badge } from "@/components/ui/Badge"
-import { Toast } from "@/components/ui/Toast"
+import { useCachedQuery } from "@/hooks/useCachedQuery"
+import { ADMIN_CACHE_TTL } from "@/components/admin/AdminPrefetch"
+
+interface CustomerRow {
+  id: string
+  name: string
+  email: string
+  mobile: string
+  role: string
+  isActive: boolean
+  createdAt: string
+  ordersCount: number
+}
+
+interface AdminCustomersData {
+  customers: CustomerRow[]
+}
 
 export default function AdminCustomersPage() {
-  const [customers, setCustomers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading } = useCachedQuery<AdminCustomersData>(
+    "admin:customers",
+    async () => {
+      const response = await axios.get("/api/admin/customers")
+      return { customers: response.data?.customers || [] }
+    },
+    { ttl: ADMIN_CACHE_TTL }
+  )
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const response = await axios.get("/api/admin/customers")
-        setCustomers(response.data?.customers || response.data?.data || (Array.isArray(response.data) ? response.data : []))
-      } catch (err) {
-        console.error(err)
-        Toast.error("Failed to load customer profiles")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchCustomers()
-  }, [])
+  const customers = data?.customers || []
 
-  if (loading) {
+  if (loading && customers.length === 0) {
     return (
       <div className="space-y-6 animate-pulse font-body">
         <div className="h-8 w-40 bg-border/40" />
@@ -35,7 +44,6 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="space-y-8 font-body">
-      {/* Header */}
       <div>
         <span className="text-gold text-xs uppercase tracking-[0.4em] font-semibold block mb-1.5">
           Directory
@@ -46,7 +54,6 @@ export default function AdminCustomersPage() {
         <div className="w-12 h-0.5 bg-gold mt-3" />
       </div>
 
-      {/* Customers Table */}
       <div className="bg-white border border-border shadow-sm overflow-x-auto">
         <table className="w-full text-left text-xs uppercase tracking-wider border-collapse">
           <thead>
@@ -98,7 +105,7 @@ export default function AdminCustomersPage() {
                     {new Date(customer.createdAt).toLocaleDateString("en-IN", {
                       day: "numeric",
                       month: "short",
-                      year: "numeric"
+                      year: "numeric",
                     })}
                   </td>
                 </tr>

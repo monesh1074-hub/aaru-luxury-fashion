@@ -12,6 +12,9 @@ interface FilterParams {
   sizes?: string[]
   fabrics?: string[]
   occasions?: string[]
+  colors?: string[]
+  readyToShip?: boolean
+  sale?: boolean
   sort?: string
 }
 

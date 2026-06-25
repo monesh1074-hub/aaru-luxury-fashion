@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
 import { verifyPaymentSignature } from "@/lib/razorpay"
+import { calculateOrderTotals, resolveCouponDiscount } from "@/lib/orderPricing"
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,22 +14,29 @@ export async function GET(req: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        subtotal: true,
+        discountAmount: true,
+        shippingCharge: true,
+        gstAmount: true,
+        totalAmount: true,
+        status: true,
+        paymentStatus: true,
+        createdAt: true,
+        updatedAt: true,
         items: {
-          include: {
-            product: {
-              include: {
-                images: { orderBy: { sortOrder: "asc" } }
-              }
-            },
-            variant: true
-          }
+          select: {
+            id: true,
+            quantity: true,
+            productName: true,
+            unitPrice: true,
+            totalPrice: true,
+          },
         },
-        address: true,
-        payments: true,
-        shipments: true
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     })
 
     return NextResponse.json({
@@ -183,28 +191,13 @@ export async function POST(req: NextRequest) {
       const coupon = await prisma.coupon.findUnique({
         where: { code: couponCode.toUpperCase().trim(), isActive: true }
       })
-
-      if (coupon && new Date(coupon.expiresAt) > new Date() && subtotal >= coupon.minOrderAmount && coupon.usedCount < coupon.maxUses) {
+      discountAmount = resolveCouponDiscount(subtotal, coupon)
+      if (discountAmount > 0 && coupon) {
         couponId = coupon.id
-        if (coupon.discountType === "PERCENTAGE") {
-          discountAmount = (subtotal * coupon.discountValue) / 100
-        } else {
-          discountAmount = coupon.discountValue
-        }
-        // Ensure discount doesn't exceed subtotal
-        discountAmount = Math.min(discountAmount, subtotal)
       }
     }
 
-    const discountedTotal = subtotal - discountAmount
-
-    // GST calculation: standard 12% on Indian luxury clothing items
-    const gstAmount = parseFloat((discountedTotal * 0.12).toFixed(2))
-
-    // Shipping calculation: Free shipping for orders above ₹5000, otherwise ₹150 flat
-    const shippingCharge = discountedTotal > 5000 ? 0 : 150
-
-    const totalAmount = discountedTotal + gstAmount + shippingCharge
+    const { gstAmount, shippingCharge, totalAmount } = calculateOrderTotals(subtotal, discountAmount)
 
     // Generate Order Number
     const orderNumber = `AARU-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useRef } from 'react'
+import Image from 'next/image'
 
 export interface UploadedImage {
   url: string
@@ -192,10 +193,12 @@ export default function ImageUploader({
                   </div>
                 ) : (
                   <>
-                    <img
+                    <Image
                       src={img.url}
                       alt={`Product photo ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-lg border-2 border-gray-200 group-hover:border-yellow-400 transition-all"
+                      fill
+                      unoptimized
+                      className="object-cover rounded-lg border-2 border-gray-200 group-hover:border-yellow-400 transition-all"
                     />
                     {/* Main photo badge */}
                     {idx === 0 && (

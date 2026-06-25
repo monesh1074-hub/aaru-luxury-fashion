@@ -22,8 +22,23 @@ const cormorant = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: "AARU | Luxury Indian Fashion",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  title: {
+    default: "AARU | Luxury Indian Fashion",
+    template: "%s | AARU",
+  },
   description: "Celebrated handloom sarees, bespoke lehengas, and designer couture.",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    siteName: "AARU Luxury Fashion",
+    title: "AARU | Luxury Indian Fashion",
+    description: "Celebrated handloom sarees, bespoke lehengas, and designer couture.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export const viewport = {

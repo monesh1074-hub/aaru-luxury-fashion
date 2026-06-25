@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
+import { withDb } from "@/lib/adminDb"
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,38 +37,32 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch orders with pagination
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
+    const { orders, total } = await withDb(async (db) => {
+      const rows = await db.order.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          orderNumber: true,
+          totalAmount: true,
+          status: true,
+          paymentStatus: true,
+          createdAt: true,
           user: {
             select: {
               id: true,
               name: true,
               email: true,
-              mobile: true
-            }
+              mobile: true,
+            },
           },
-          address: true,
-          items: {
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
-          payments: true,
-          shipments: true
         },
         orderBy: { createdAt: "desc" },
         skip,
-        take: limit
-      }),
-      prisma.order.count({ where })
-    ])
+        take: limit,
+      })
+      const count = await db.order.count({ where })
+      return { orders: rows, total: count }
+    })
 
     const totalPages = Math.ceil(total / limit)
 

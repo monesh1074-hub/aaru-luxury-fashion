@@ -1,8 +1,11 @@
+"use client"
+
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
-import { X, ArrowRight } from "lucide-react"
+import { X, ArrowRight, Search } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
+import { SECONDARY_NAV, WHATSAPP_URL } from "@/lib/constants"
 
 interface MobileMenuProps {
   isOpen: boolean
@@ -12,21 +15,10 @@ interface MobileMenuProps {
 export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const { isAuthenticated, user } = useAuthStore()
 
-  const links = [
-    { label: "Shop All", href: "/shop" },
-    { label: "Heritage Sarees", href: "/shop/sarees" },
-    { label: "Designer Couture", href: "/shop/designer-sarees" },
-    { label: "Bespoke Custom", href: "/custom" },
-    { label: "The Sixth Element", href: "/sixth-element" },
-    { label: "Our Story", href: "/story" },
-    { label: "About Moni", href: "/aaru-by-moni" },
-  ]
-
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -35,35 +27,41 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
             className="absolute inset-0 bg-dark/60 backdrop-blur-sm"
           />
 
-          {/* Drawer Panel */}
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "tween", duration: 0.35, ease: "easeInOut" }}
-            className="relative w-4/5 max-w-sm h-full bg-dark text-background flex flex-col p-6 sm:p-8 justify-between border-r border-[#262422] z-10"
+            className="relative w-4/5 max-w-sm h-full bg-dark text-background flex flex-col p-6 sm:p-8 justify-between border-r border-[#262422] z-10 overflow-y-auto"
           >
             <div>
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-[#262422] pb-6 mb-8">
+              <div className="flex items-center justify-between border-b border-[#262422] pb-6 mb-6">
                 <span className="font-display text-xl font-bold tracking-widest text-gold">AARU</span>
                 <button
                   onClick={onClose}
-                  className="text-text-secondary hover:text-gold transition-colors duration-200"
+                  className="text-text-secondary hover:text-gold transition-colors duration-200 p-2"
                   aria-label="Close menu"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Navigation links */}
-              <nav className="flex flex-col space-y-6 text-sm uppercase tracking-[0.2em] font-semibold">
-                {links.map((link, idx) => (
+              <Link
+                href="/search"
+                onClick={onClose}
+                className="w-full flex items-center gap-3 border border-[#262422] px-4 py-3 mb-8 text-sm text-text-secondary hover:border-gold hover:text-gold transition-colors"
+              >
+                <Search size={16} />
+                Search collections...
+              </Link>
+
+              <nav className="flex flex-col space-y-5 text-sm uppercase tracking-[0.15em] font-semibold">
+                {SECONDARY_NAV.map((link) => (
                   <Link
-                    key={idx}
+                    key={link.label}
                     href={link.href}
                     onClick={onClose}
-                    className="hover:text-gold transition-colors duration-300 flex items-center justify-between group"
+                    className="hover:text-gold transition-colors duration-300 flex items-center justify-between group py-1"
                   >
                     <span>{link.label}</span>
                     <ArrowRight
@@ -75,8 +73,16 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
               </nav>
             </div>
 
-            {/* Bottom Account Action */}
-            <div className="border-t border-[#262422] pt-6 flex flex-col space-y-4">
+            <div className="border-t border-[#262422] pt-6 flex flex-col space-y-3 mt-8">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                className="w-full text-center py-3 bg-[#25D366] text-white font-body font-semibold text-xs tracking-widest uppercase hover:bg-[#20bd5a] transition-all duration-300"
+              >
+                Chat on WhatsApp
+              </a>
               <Link
                 href={isAuthenticated ? "/dashboard" : "/login"}
                 onClick={onClose}

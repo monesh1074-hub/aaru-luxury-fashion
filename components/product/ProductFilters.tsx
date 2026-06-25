@@ -10,6 +10,9 @@ interface FilterParams {
   sizes?: string[]
   fabrics?: string[]
   occasions?: string[]
+  colors?: string[]
+  readyToShip?: boolean
+  sale?: boolean
   sort?: string
 }
 
@@ -29,6 +32,8 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
   const sizes = ["S", "M", "L", "XL", "Free Size", "Unstitched", "Custom Measurement"]
   const fabrics = ["Pure Katan Silk", "Silk Cotton Chanderi", "Kanchipuram Silk", "Pure Georgette", "Plush Silk Velvet", "Organza Silk", "Chanderi Silk", "Organic Modal Silk", "Pure Banarasi Raw Silk", "Jacquard Raw Silk"]
   const occasions = ["Bridal & Weddings", "Festive Wear", "Evening Soiree", "Casual Elegance"]
+  const colors = ["Crimson Red", "Maroon Red", "Blush Pink", "Emerald Green", "Royal Blue", "Gold", "Ivory", "Black"]
+  const designers = ["Moni", "The Sixth Element", "Heritage Atelier"]
 
   // Local price state — debounced before pushing to parent
   const [localMin, setLocalMin] = useState(filters.priceMin?.toString() || "")
@@ -86,7 +91,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
   }
 
   const handleCheckboxToggle = (
-    field: "sizes" | "fabrics" | "occasions",
+    field: "sizes" | "fabrics" | "occasions" | "colors",
     val: string
   ) => {
     const list = filters[field] || []
@@ -252,6 +257,82 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
               </label>
             )
           })}
+        </div>
+      </div>
+
+      {/* 7. Color */}
+      <div className="space-y-4">
+        <h4 className="text-[11px] uppercase tracking-widest font-semibold text-text-secondary mb-2">
+          Color
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          {colors.map((color) => {
+            const isSelected = (filters.colors || []).includes(color)
+            return (
+              <button
+                key={color}
+                onClick={() => handleCheckboxToggle("colors", color)}
+                className={cn(
+                  "border px-3 py-2 text-[10px] tracking-wider uppercase transition-all duration-300 font-semibold",
+                  {
+                    "border-dark bg-dark text-background": isSelected,
+                    "border-border text-text-secondary hover:border-gold": !isSelected,
+                  }
+                )}
+              >
+                {color}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 8. Designer */}
+      <div className="space-y-4">
+        <h4 className="text-[11px] uppercase tracking-widest font-semibold text-text-secondary mb-2">
+          Designer
+        </h4>
+        <div className="space-y-2 text-xs">
+          {designers.map((designer) => (
+            <span key={designer} className="block text-text-primary hover:text-gold transition-colors duration-200 cursor-default">
+              {designer}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 9. Availability */}
+      <div className="space-y-4">
+        <h4 className="text-[11px] uppercase tracking-widest font-semibold text-text-secondary mb-2">
+          Availability
+        </h4>
+        <div className="space-y-2 text-xs">
+          <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!!filters.readyToShip}
+              onChange={() => onFilterChange({ readyToShip: filters.readyToShip ? undefined : true })}
+              className="rounded-none border-border text-gold focus:ring-gold focus:ring-0 focus:ring-offset-0"
+            />
+            <span className={cn("text-text-primary hover:text-gold transition-colors duration-200", {
+              "text-gold font-semibold": filters.readyToShip,
+            })}>
+              Ready To Ship
+            </span>
+          </label>
+          <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!!filters.sale}
+              onChange={() => onFilterChange({ sale: filters.sale ? undefined : true })}
+              className="rounded-none border-border text-gold focus:ring-gold focus:ring-0 focus:ring-offset-0"
+            />
+            <span className={cn("text-text-primary hover:text-gold transition-colors duration-200", {
+              "text-gold font-semibold": filters.sale,
+            })}>
+              On Sale
+            </span>
+          </label>
         </div>
       </div>
     </aside>

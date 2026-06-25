@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { getAuthUser } from '@/lib/auth'
 import { clearProductsCache } from '@/lib/productsCache'
+import { withDb } from '@/lib/adminDb'
 
 function revalidateProductPages() {
   clearProductsCache()
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get('categoryId') || ''
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
+    const view = searchParams.get('view') || 'list'
     const skip = (page - 1) * limit
 
     const where: any = {}
@@ -78,21 +80,52 @@ export async function GET(req: NextRequest) {
       where.categoryId = categoryId
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: {
-          category: { select: { id: true, name: true } },
-          images: { orderBy: { sortOrder: 'asc' } },
-          variants: true,
-          _count: { select: { orderItems: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.product.count({ where })
-    ])
+    const listSelect = {
+      id: true,
+      name: true,
+      slug: true,
+      categoryId: true,
+      basePrice: true,
+      salePrice: true,
+      isCustomizable: true,
+      isFeatured: true,
+      isNewArrival: true,
+      isActive: true,
+      createdAt: true,
+      category: { select: { id: true, name: true, slug: true } },
+      images: {
+        take: 1,
+        orderBy: { sortOrder: 'asc' as const },
+        select: { id: true, imageUrl: true, altText: true, isPrimary: true, sortOrder: true },
+      },
+      _count: { select: { variants: true } },
+    }
+
+    const { products, total } = await withDb(async (db) => {
+      const rows =
+        view === 'full'
+          ? await db.product.findMany({
+              where,
+              include: {
+                category: { select: { id: true, name: true } },
+                images: { orderBy: { sortOrder: 'asc' } },
+                variants: true,
+                _count: { select: { orderItems: true } },
+              },
+              orderBy: { createdAt: 'desc' },
+              skip,
+              take: limit,
+            })
+          : await db.product.findMany({
+              where,
+              select: listSelect,
+              orderBy: { createdAt: 'desc' },
+              skip,
+              take: limit,
+            })
+      const count = await db.product.count({ where })
+      return { products: rows, total: count }
+    })
 
     return NextResponse.json({
       success: true,

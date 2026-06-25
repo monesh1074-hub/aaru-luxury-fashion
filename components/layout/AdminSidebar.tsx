@@ -2,10 +2,11 @@
 
 import React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { LayoutDashboard, ShoppingBag, Landmark, Users, Scissors, LogOut, X } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
+import { prefetchAdminPage } from "@/components/admin/AdminPrefetch"
 
 interface AdminSidebarProps {
   isOpen?: boolean
@@ -14,14 +15,15 @@ interface AdminSidebarProps {
 
 export const AdminSidebar = ({ isOpen = false, onClose }: AdminSidebarProps) => {
   const pathname = usePathname()
+  const router = useRouter()
   const { logout } = useAuth()
 
   const links = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Products", href: "/admin/products", icon: ShoppingBag },
-    { label: "Orders", href: "/admin/orders", icon: Landmark },
-    { label: "Customers", href: "/admin/customers", icon: Users },
-    { label: "Custom Orders", href: "/admin/custom-orders", icon: Scissors },
+    { label: "Dashboard", href: "/admin", icon: LayoutDashboard, cacheKey: "admin:dashboard" },
+    { label: "Products", href: "/admin/products", icon: ShoppingBag, cacheKey: "admin:products" },
+    { label: "Orders", href: "/admin/orders", icon: Landmark, cacheKey: "admin:orders" },
+    { label: "Customers", href: "/admin/customers", icon: Users, cacheKey: "admin:customers" },
+    { label: "Custom Orders", href: "/admin/custom-orders", icon: Scissors, cacheKey: "admin:custom-orders" },
   ]
 
   return (
@@ -61,6 +63,11 @@ export const AdminSidebar = ({ isOpen = false, onClose }: AdminSidebarProps) => 
               <Link
                 key={idx}
                 href={link.href}
+                prefetch={true}
+                onMouseEnter={() => {
+                  router.prefetch(link.href)
+                  prefetchAdminPage(link.cacheKey)
+                }}
                 onClick={onClose}
                 className={cn(
                   "flex items-center space-x-3 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300",

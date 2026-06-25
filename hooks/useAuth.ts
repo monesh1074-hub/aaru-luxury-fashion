@@ -2,10 +2,8 @@ import { useState } from "react"
 import { useAuthStore } from "@/store/authStore"
 import { useCartStore } from "@/store/cartStore"
 import { useWishlistStore } from "@/store/wishlistStore"
-import axios from "axios"
+import axios from "@/lib/apiClient"
 import { useRouter } from "next/navigation"
-
-axios.defaults.withCredentials = true
 
 export function useAuth() {
   const router = useRouter()
